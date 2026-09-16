@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   TrendingUp, ShieldAlert, Activity, Zap, ArrowRight, X, AlertTriangle, 
   CheckCircle2, Clock, BarChart2, ShieldCheck, Sparkles, Layers
 } from 'lucide-react';
 import { PrototypeBadge } from '../components/PrototypeBadge';
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
 interface HorizonForecast {
   horizon_days: number;
@@ -23,10 +23,10 @@ interface HorizonForecast {
 }
 
 export const Production: React.FC = () => {
+  const navigate = useNavigate();
   const [selectedHorizon, setSelectedHorizon] = useState<'7_day' | '15_day' | '30_day'>('7_day');
   const [shortfallData, setShortfallData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [optimizerMsg, setOptimizerMsg] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/shortfallshield')
@@ -90,10 +90,6 @@ export const Production: React.FC = () => {
   };
 
   const currentForecast: HorizonForecast = forecasts[selectedHorizon];
-
-  const handleGenerateRecoveryPlan = () => {
-    setOptimizerMsg(`Connecting to Block 6 Prescriptive Optimizer... Requesting optimal resource reallocation for ${currentForecast.horizon_days}-Day horizon (${currentForecast.expected_tonnes_short} MT deficit).`);
-  };
 
   const getRiskBadge = (risk: string) => {
     switch (risk) {
@@ -214,22 +210,15 @@ export const Production: React.FC = () => {
             </h2>
           </div>
           
-          {/* Action Button: Generate Prescriptive Recovery Plan */}
-          <button
-            onClick={handleGenerateRecoveryPlan}
-            className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-900 font-extrabold text-xs rounded-lg transition shadow-md flex items-center gap-2"
+          {/* Action Button: Generate Prescriptive Recovery Plan -> Navigates to /decision-center */}
+          <Link
+            to="/decision-center"
+            className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-900 font-extrabold text-xs rounded-lg transition shadow-md flex items-center gap-2 shrink-0"
           >
             <Zap className="w-4 h-4 text-slate-900 fill-slate-900" />
             <span>Generate Prescriptive Recovery Plan</span>
-          </button>
+          </Link>
         </div>
-
-        {optimizerMsg && (
-          <div className="p-3 bg-blue-50 border border-blue-300 rounded-lg text-xs text-blue-900 font-mono flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-blue-600 shrink-0" />
-            <span>{optimizerMsg}</span>
-          </div>
-        )}
 
         {/* Tree SHAP Feature Contribution Bars */}
         <div className="space-y-4">
