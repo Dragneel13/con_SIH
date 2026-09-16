@@ -30,6 +30,7 @@ from app.api import (
     field,
     drilling,
     optimizer,
+    whatif,
 )
 from app.database import check_db_connection
 
@@ -113,6 +114,7 @@ app.include_router(targets.router, prefix="/api", tags=["Drill Targets"])
 app.include_router(drilling.router, prefix="/api", tags=["Closed-Loop Drilling & Ground Truth"])
 app.include_router(production.router, prefix="/api", tags=["Production"])
 app.include_router(optimizer.router, prefix="/api", tags=["Prescriptive Mine Optimizer"])
+app.include_router(whatif.router, tags=["What-If Simulator"])
 app.include_router(equipment.router, prefix="/api", tags=["Equipment"])
 app.include_router(blocks.router, prefix="/api", tags=["Mine Blocks"])
 app.include_router(recommendations.router, prefix="/api", tags=["Recommendations"])

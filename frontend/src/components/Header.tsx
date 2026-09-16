@@ -39,6 +39,7 @@ export const Header: React.FC = () => {
     { path: '/production', label: 'PRODUCTION' },
     { path: '/equipment', label: 'EQUIPMENT' },
     { path: '/decisions', label: 'DECISION CENTER' },
+    { path: '/what-if', label: 'WHAT-IF SIMULATOR' },
     { path: '/field-survey', label: 'FIELD SURVEY' },
     { path: '/data-models', label: 'DATA & MODELS' },
     { path: '/security', label: 'SECURITY CENTER' },

@@ -20,6 +20,7 @@ import { Contact } from './pages/Contact';
 import { Login } from './pages/Login';
 import { Weather } from './pages/Weather';
 import { Security } from './pages/Security';
+import { WhatIfSimulator } from './pages/WhatIfSimulator';
 
 export const App: React.FC = () => {
   return (
@@ -96,6 +97,14 @@ export const App: React.FC = () => {
                 element={
                   <ProtectedRoute path="/decisions">
                     <DecisionCenter />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/what-if"
+                element={
+                  <ProtectedRoute path="/what-if">
+                    <WhatIfSimulator />
                   </ProtectedRoute>
                 }
               />
