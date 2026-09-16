@@ -1,3 +1,11 @@
+import sys
+import os
+
+# Ensure project root is in sys.path for backend package resolution
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -23,7 +31,11 @@ from app.api import (
 )
 from app.database import check_db_connection
 
-# ── Security Headers Middleware (Requirement 9) ─────────────────────────────
+# Alias backend.app modules in sys.modules to handle joblib unpickling across paths
+import app as app_pkg
+sys.modules['backend.app'] = app_pkg
+
+# ── Security Headers Middleware ──────────────────────────────────────────────
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
@@ -32,13 +44,12 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "SAMEORIGIN"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        # Content Security Policy (allowing OpenStreetMap tiles & local APIs without breaking MapLibre GL)
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; "
             "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
-            "img-src 'self' data: blob: https://*.tile.openstreetmap.org https://tile.openstreetmap.org; "
-            "connect-src 'self' http://localhost:8000 http://localhost:3000 ws://localhost:3000 https://tile.openstreetmap.org; "
+            "img-src 'self' data: blob: https://*.tile.openstreetmap.org https://tile.openstreetmap.org https://server.arcgisonline.com; "
+            "connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 http://localhost:3000 ws://localhost:3000; "
             "font-src 'self' data: https://cdn.jsdelivr.net;"
         )
         return response
@@ -79,14 +90,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Safe Error Handling (Requirement 17: Prevents stack trace / credential leaks) ──
+# ── Safe Error Handling ──────────────────────────────────────────────────────
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception):
     logger.error(f"Internal Server Error on {request.url.path}: {str(exc)}")
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"detail": "An internal system error occurred. Secure error log recorded."}
+        content={"detail": f"An internal system error occurred: {str(exc)}"}
     )
 
 # ── Router Registrations ────────────────────────────────────────────────────

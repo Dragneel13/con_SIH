@@ -1,56 +1,47 @@
 {
-  "LogisticRegression": {
-    "accuracy": 0.5868175110673881,
-    "roc_auc": 0.9241845931545201,
-    "pr_auc": 0.5582006343182714,
-    "precision": 0.18092909535452323,
-    "recall": 0.9866666666666667,
-    "f1": 0.30578512396694213,
+  "ElkanNotoPULearner": {
+    "spatial_blocks_count": 6,
+    "cv_folds": 3,
+    "roc_auc": 0.9946008186376442,
+    "roc_auc_std": 0.006678062945086861,
+    "pr_auc": 0.9883474230938808,
+    "accuracy": 0.9750942040580692,
+    "precision": 0.5279179366420743,
+    "recall": 0.595840554592721,
+    "f1": 0.5585752178855627,
     "confusion_matrix": [
       [
-        2016,
-        1675
+        10421,
+        220
       ],
       [
-        5,
-        370
+        12,
+        974
       ]
-    ]
+    ],
+    "spatial_leakage_prevented": true
   },
-  "RandomForest": {
-    "accuracy": 1.0,
-    "roc_auc": 1.0,
-    "pr_auc": 1.0,
-    "precision": 1.0,
-    "recall": 1.0,
-    "f1": 1.0,
-    "confusion_matrix": [
-      [
-        3691,
-        0
-      ],
-      [
-        0,
-        375
-      ]
-    ]
-  },
-  "HistGradientBoosting": {
-    "accuracy": 0.9958189867191343,
-    "roc_auc": 0.9999786868960535,
-    "pr_auc": 0.9997701545530493,
-    "precision": 0.958974358974359,
-    "recall": 0.9973333333333333,
-    "f1": 0.9777777777777777,
-    "confusion_matrix": [
-      [
-        3675,
-        16
-      ],
-      [
-        1,
-        374
-      ]
-    ]
-  }
+  "propensity_constant_c": 0.8802338324090422,
+  "top_features": [
+    {
+      "feature": "dist_chem_km",
+      "importance": 0.4768117751779118
+    },
+    {
+      "feature": "nearest_mno_pct",
+      "importance": 0.16518223894623238
+    },
+    {
+      "feature": "soil_moisture",
+      "importance": 0.07665842862371826
+    },
+    {
+      "feature": "dist_roads_km",
+      "importance": 0.07320319637110609
+    },
+    {
+      "feature": "rainfall",
+      "importance": 0.05124069737120911
+    }
+  ]
 }

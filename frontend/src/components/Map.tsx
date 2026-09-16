@@ -30,6 +30,7 @@ export const Map: React.FC<MapProps> = ({
     geology: true,
     occurrences: true,
     lineaments: false,
+    cem: true,
   },
   selectedTarget = 'Target-1',
   onMarkerClick
@@ -142,7 +143,42 @@ export const Map: React.FC<MapProps> = ({
         }
       });
 
-      // 3. AI Prospectivity Heatmap Raster Polygons (Smooth Gradient: Red, Orange, Yellow, Green, Blue)
+      // 3. CEM Spectral Anomaly Layer (Cyan Cyan/Magenta FIR Filter Anomaly)
+      map.current.addSource('cem-source', {
+        type: 'geojson',
+        data: {
+          type: 'FeatureCollection',
+          features: [
+            {
+              type: 'Feature',
+              properties: { cem_score: 0.88, name: 'CEM Anomaly Hotspot' },
+              geometry: {
+                type: 'Polygon',
+                coordinates: [[[80.68, 21.81], [80.76, 21.81], [80.76, 21.87], [80.68, 21.87], [80.68, 21.81]]]
+              }
+            },
+            {
+              type: 'Feature',
+              properties: { cem_score: 0.74, name: 'CEM Anomaly Target 3' },
+              geometry: {
+                type: 'Polygon',
+                coordinates: [[[79.78, 21.88], [79.86, 21.88], [79.86, 21.94], [79.78, 21.94], [79.78, 21.88]]]
+              }
+            }
+          ]
+        }
+      });
+      map.current.addLayer({
+        id: 'cem-fill',
+        type: 'fill',
+        source: 'cem-source',
+        paint: {
+          'fill-color': '#06B6D4',
+          'fill-opacity': 0.45
+        }
+      });
+
+      // 4. AI Prospectivity Heatmap Raster Polygons (Smooth Gradient: Red, Orange, Yellow, Green, Blue)
       map.current.addSource('prospectivity-source', {
         type: 'geojson',
         data: {
@@ -216,7 +252,7 @@ export const Map: React.FC<MapProps> = ({
         }
       });
 
-      // 4. GSI Sausar Group Geology Layer
+      // 5. GSI Sausar Group Geology Layer
       map.current.addSource('geology-source', {
         type: 'geojson',
         data: {
@@ -273,7 +309,8 @@ export const Map: React.FC<MapProps> = ({
       sentinel2: 'esri-satellite-layer',
       geology: 'geology-fill',
       prospectivity: 'prospectivity-fill',
-      lineaments: 'mn-belt-line-layer'
+      lineaments: 'mn-belt-line-layer',
+      cem: 'cem-fill'
     };
 
     Object.entries(layerMap).forEach(([key, layerId]) => {
@@ -287,7 +324,7 @@ export const Map: React.FC<MapProps> = ({
       }
     });
 
-    // Re-render Map Markers (Target Pins with Priority Labels matching Reference Screenshot)
+    // Re-render Map Markers
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
 
@@ -303,7 +340,6 @@ export const Map: React.FC<MapProps> = ({
       const container = document.createElement('div');
       container.className = 'flex flex-col items-center cursor-pointer group z-30';
 
-      // Pin Bubble Label (Matching Screenshot Label style)
       const labelDiv = document.createElement('div');
       labelDiv.className = `px-2.5 py-1 rounded-md shadow-2xl text-[10px] font-extrabold flex items-center gap-1.5 transition-all ${
         isSelected
@@ -316,7 +352,6 @@ export const Map: React.FC<MapProps> = ({
         <span class="text-[9px] text-slate-300 font-normal">${pin.label}</span>
       `;
 
-      // Marker Dot Pin
       const dotDiv = document.createElement('div');
       dotDiv.className = `w-4 h-4 rounded-full ${pin.color} border-2 border-white shadow-xl mt-1 ${
         isSelected ? 'ring-4 ring-amber-400 scale-125' : ''
@@ -336,7 +371,6 @@ export const Map: React.FC<MapProps> = ({
       markersRef.current.push(m);
     });
 
-    // Key Location Place Name Labels (Balaghat, Tirodi, Ukwa)
     const placeNames = [
       { name: 'Balaghat', coords: [80.18, 21.82] },
       { name: 'Tirodi', coords: [79.71, 21.68] },
@@ -375,7 +409,6 @@ export const Map: React.FC<MapProps> = ({
     <div className="relative w-full h-full rounded-xl border border-slate-700 overflow-hidden shadow-inner min-h-[580px]" style={{ height }}>
       <div ref={mapContainer} className="w-full h-full min-h-[580px] bg-[#0F172A]" />
 
-      {/* ZOOM & LAYER CONTROLS (Matching Screenshot Bottom Right Controls) */}
       <div className="absolute bottom-6 right-6 flex flex-col items-center gap-1.5 z-20">
         <button
           onClick={handleZoomIn}
@@ -402,7 +435,6 @@ export const Map: React.FC<MapProps> = ({
         </button>
       </div>
 
-      {/* SCALE BAR (Matching Screenshot Bottom Left Scale) */}
       <div className="absolute bottom-6 left-6 bg-[#0F172A]/90 px-3 py-1.5 rounded-md border border-slate-700 text-[10px] text-slate-300 font-mono flex items-center gap-3 z-20 shadow-lg">
         <div className="flex items-center gap-1">
           <span className="w-2 h-2 rounded-full bg-blue-400" />
