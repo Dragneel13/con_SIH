@@ -111,32 +111,32 @@ export const Production: React.FC = () => {
       />
 
       {/* Page Title Header */}
-      <div className="bg-[#0B192C] text-white p-6 rounded-xl border border-slate-700 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-gradient-to-r from-[#1B2170] via-[#313896] to-[#3B42A6] text-white p-6 rounded-2xl border border-[#2B308B] shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-xs font-bold text-amber-400 uppercase tracking-wider">
-            <TrendingUp className="w-4 h-4 text-amber-400" />
+          <div className="flex items-center gap-2 text-xs font-bold text-amber-300 uppercase tracking-wider">
+            <TrendingUp className="w-4 h-4 text-amber-300" />
             <span>OPERATIONAL INTELLIGENCE & SHORTFALLSHIELD</span>
           </div>
           <h1 className="text-2xl font-bold font-serif text-white mt-1">
             ShortfallShield: 7 / 15 / 30 Day Production Shortfall Forecasting
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-blue-100/90 mt-1">
             RandomForest / XGBoost time-split model taking MineTwin block readiness & equipment telemetry inputs
           </p>
         </div>
 
         {/* Horizon Tabs Bar */}
-        <div className="flex items-center gap-1.5 bg-[#0F172A] p-1.5 rounded-lg border border-slate-700">
+        <div className="flex items-center gap-2 bg-[#1B2170]/80 backdrop-blur-sm p-1.5 rounded-full border border-white/20 shadow-inner">
           {(['7_day', '15_day', '30_day'] as const).map((hKey) => {
             const hNum = hKey === '7_day' ? 7 : hKey === '15_day' ? 15 : 30;
             return (
               <button
                 key={hKey}
                 onClick={() => setSelectedHorizon(hKey)}
-                className={`px-3.5 py-1.5 rounded-md font-bold text-xs transition ${
+                className={`px-4 py-1.5 rounded-full font-bold text-xs transition ${
                   selectedHorizon === hKey
-                    ? 'bg-blue-900 text-white shadow'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                    ? 'bg-white text-[#313896] shadow-sm'
+                    : 'text-blue-100 hover:text-white hover:bg-white/10'
                 }`}
               >
                 {hNum} Days Forecast
@@ -158,38 +158,38 @@ export const Production: React.FC = () => {
             <div
               key={key}
               onClick={() => setSelectedHorizon(key as any)}
-              className={`cursor-pointer rounded-xl border p-5 shadow-sm transition-all ${
+              className={`cursor-pointer rounded-2xl border p-5 shadow-sm transition-all ${
                 isSelected
-                  ? 'bg-blue-950/40 border-blue-600 ring-2 ring-blue-500 shadow-blue-900/30'
-                  : 'bg-white border-slate-200 hover:border-slate-400'
+                  ? 'bg-white border-[#313896] ring-2 ring-[#313896] shadow-md'
+                  : 'bg-white border-slate-200 hover:border-[#313896]/50'
               }`}
             >
-              <div className="flex items-center justify-between border-b pb-2.5">
-                <span className={`font-serif font-bold text-sm ${isSelected ? 'text-white' : 'text-[#0B192C]'}`}>
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <span className="font-serif font-bold text-base text-[#313896]">
                   {title}
                 </span>
                 {getRiskBadge(data.risk_level)}
               </div>
 
-              <div className="mt-3 space-y-2 text-xs">
+              <div className="mt-4 space-y-2.5 text-xs font-sans">
                 <div className="flex justify-between">
-                  <span className={isSelected ? 'text-slate-400' : 'text-slate-500'}>Target Output:</span>
-                  <strong className={`font-mono ${isSelected ? 'text-white' : 'text-slate-900'}`}>{data.target_production_tonnes.toLocaleString()} MT</strong>
+                  <span className="text-slate-500">Target Output:</span>
+                  <strong className="font-mono text-slate-900">{data.target_production_tonnes.toLocaleString()} MT</strong>
                 </div>
 
                 <div className="flex justify-between">
-                  <span className={isSelected ? 'text-slate-400' : 'text-slate-500'}>Predicted Output:</span>
-                  <strong className={`font-mono ${isSelected ? 'text-cyan-300' : 'text-blue-900'}`}>{data.predicted_production_tonnes.toLocaleString()} MT</strong>
+                  <span className="text-slate-500">Predicted Output:</span>
+                  <strong className="font-mono text-[#313896] font-bold">{data.predicted_production_tonnes.toLocaleString()} MT</strong>
                 </div>
 
                 <div className="flex justify-between">
-                  <span className={isSelected ? 'text-slate-400' : 'text-slate-500'}>Expected Shortfall:</span>
-                  <strong className="font-mono text-red-500 font-bold">-{data.expected_tonnes_short.toLocaleString()} MT</strong>
+                  <span className="text-slate-500">Expected Shortfall:</span>
+                  <strong className="font-mono text-red-600 font-bold">-{data.expected_tonnes_short.toLocaleString()} MT</strong>
                 </div>
 
                 <div className="flex justify-between">
-                  <span className={isSelected ? 'text-slate-400' : 'text-slate-500'}>Shortfall Probability:</span>
-                  <strong className="font-mono text-amber-400 font-bold">{data.shortfall_percentage}%</strong>
+                  <span className="text-slate-500">Shortfall Probability:</span>
+                  <strong className="font-mono text-amber-700 font-bold">{data.shortfall_percentage}%</strong>
                 </div>
               </div>
             </div>
@@ -198,14 +198,14 @@ export const Production: React.FC = () => {
       </div>
 
       {/* SHAP Root Cause Breakdown Panel (Why is Production at Risk?) */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-5">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-200 pb-4">
+      <div className="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-sm space-y-5">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100 pb-4">
           <div>
-            <div className="flex items-center gap-2 text-xs font-bold text-[#1E3A8A] uppercase tracking-wider">
+            <div className="flex items-center gap-2 text-xs font-bold text-[#313896] uppercase tracking-wider">
               <ShieldAlert className="w-4 h-4 text-red-600" />
               <span>SHAP MODEL ATTRITION EXPLAINER ({currentForecast.horizon_days}-DAY HORIZON)</span>
             </div>
-            <h2 className="text-xl font-bold text-[#0B192C] font-serif mt-1">
+            <h2 className="text-xl font-bold text-[#313896] font-serif mt-1">
               Why is Production at Risk? ({currentForecast.expected_tonnes_short} MT Expected Deficit)
             </h2>
           </div>
@@ -213,9 +213,9 @@ export const Production: React.FC = () => {
           {/* Action Button: Generate Prescriptive Recovery Plan -> Navigates to /decision-center */}
           <Link
             to="/decision-center"
-            className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-900 font-extrabold text-xs rounded-lg transition shadow-md flex items-center gap-2 shrink-0"
+            className="px-6 py-2.5 bg-[#313896] hover:bg-[#282D7A] text-white font-bold text-xs rounded-full transition shadow-sm flex items-center gap-2 shrink-0"
           >
-            <Zap className="w-4 h-4 text-slate-900 fill-slate-900" />
+            <Zap className="w-4 h-4 text-amber-300 fill-amber-300" />
             <span>Generate Prescriptive Recovery Plan</span>
           </Link>
         </div>
@@ -223,12 +223,12 @@ export const Production: React.FC = () => {
         {/* Tree SHAP Feature Contribution Bars */}
         <div className="space-y-4">
           {currentForecast.shap.map((shapItem, idx) => (
-            <div key={idx} className="p-3.5 bg-slate-50 border border-slate-200 rounded-lg space-y-1.5 text-xs font-sans">
+            <div key={idx} className="p-4 bg-[#F8FAFC] border border-slate-200/80 rounded-xl space-y-2 text-xs font-sans">
               <div className="flex items-center justify-between">
-                <span className="font-bold text-[#0B192C]">{shapItem.label}</span>
+                <span className="font-bold text-[#313896] text-xs">{shapItem.label}</span>
                 <div className="flex items-center gap-3 font-mono">
                   <span className="text-red-700 font-bold">-{shapItem.contribution_tonnes} MT</span>
-                  <span className="bg-red-100 text-red-800 font-extrabold px-2 py-0.5 rounded text-[11px]">
+                  <span className="bg-red-100 text-red-800 font-extrabold px-2.5 py-0.5 rounded-full text-[11px]">
                     +{shapItem.pct_impact}% SHAP
                   </span>
                 </div>
@@ -237,7 +237,7 @@ export const Production: React.FC = () => {
               {/* Progress Bar */}
               <div className="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
                 <div 
-                  className="h-full rounded-full bg-[#1E3A8A] transition-all duration-500" 
+                  className="h-full rounded-full bg-[#313896] transition-all duration-500" 
                   style={{ width: `${Math.min(100, shapItem.pct_impact * 3.5)}%` }}
                 />
               </div>
@@ -245,8 +245,8 @@ export const Production: React.FC = () => {
           ))}
         </div>
 
-        <div className="p-3 bg-slate-100 rounded-lg text-[11px] text-slate-600 font-mono flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-blue-800 shrink-0" />
+        <div className="p-3.5 bg-[#EBEFFA] border border-[#D0DCF5] rounded-xl text-xs text-[#313896] font-mono flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-[#313896] shrink-0" />
           <span>SHAP feature contributions generated by TreeExplainer on operational & environmental telemetry features.</span>
         </div>
       </div>

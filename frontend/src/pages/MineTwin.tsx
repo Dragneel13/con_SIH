@@ -49,67 +49,67 @@ export const MineTwin: React.FC = () => {
       />
 
       {/* Page Title Header */}
-      <div className="bg-[#0B192C] text-white p-6 rounded-xl border border-slate-700 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-gradient-to-r from-[#1B2170] via-[#313896] to-[#3B42A6] text-white p-6 rounded-2xl border border-[#2B308B] shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-xs font-bold text-amber-400 uppercase tracking-wider">
-            <Building2 className="w-4 h-4 text-amber-400" />
+          <div className="flex items-center gap-2 text-xs font-bold text-amber-300 uppercase tracking-wider">
+            <Building2 className="w-4 h-4 text-amber-300" />
             <span>MOIL UNDERGROUND MINE DIGITAL TWIN</span>
           </div>
           <h1 className="text-2xl font-bold font-serif text-white mt-1">
             MineTwin Operational State & Block Readiness Matrix
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-blue-100/90 mt-1">
             Real-time block readiness scoring feeding directly into ShortfallShield production forecasting
           </p>
         </div>
-        <div className="bg-[#0F172A] p-3 rounded-lg border border-slate-700 text-xs font-mono">
-          <p className="text-slate-400">Current Active Mine</p>
+        <div className="bg-[#1B2170]/80 backdrop-blur-sm p-3.5 rounded-xl border border-white/20 text-xs font-mono shadow-inner">
+          <p className="text-blue-200">Current Active Mine</p>
           <p className="text-white font-bold text-sm">Balaghat Mn Mine (385m ASL)</p>
         </div>
       </div>
 
       {/* Mine Block Model Grid Table */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-          <h2 className="text-base font-bold text-[#0B192C] font-serif flex items-center gap-2">
+      <div className="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-sm space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <h2 className="text-base font-bold text-[#313896] font-serif flex items-center gap-2">
             <span>Operational Block Readiness Matrix (Balaghat Pit / Underground Levels)</span>
           </h2>
-          <span className="text-xs text-slate-500 font-mono">4 Active Face Blocks</span>
+          <span className="text-xs text-[#313896] font-mono bg-[#EBEFFA] px-2.5 py-1 rounded-full border border-[#D0DCF5]">4 Active Face Blocks</span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="bg-slate-100 border-b border-slate-200 text-[#0B192C] font-bold uppercase tracking-wider text-[11px]">
-                <th className="py-3 px-4">Block Code</th>
-                <th className="py-3 px-4">Development</th>
-                <th className="py-3 px-4">Access</th>
-                <th className="py-3 px-4">Drilling</th>
-                <th className="py-3 px-4">Blasting</th>
-                <th className="py-3 px-4">Readiness Score</th>
-                <th className="py-3 px-4">Est. Ore Tonnes</th>
-                <th className="py-3 px-4">Mn Grade (%)</th>
-                <th className="py-3 px-4 text-right">Operational Status</th>
+              <tr className="bg-[#EBEFFA] border-b border-[#D0DCF5] text-[#313896] font-bold uppercase tracking-wider text-[11px]">
+                <th className="py-3.5 px-4 rounded-l-xl">Block Code</th>
+                <th className="py-3.5 px-4">Development</th>
+                <th className="py-3.5 px-4">Access</th>
+                <th className="py-3.5 px-4">Drilling</th>
+                <th className="py-3.5 px-4">Blasting</th>
+                <th className="py-3.5 px-4">Readiness Score</th>
+                <th className="py-3.5 px-4">Est. Ore Tonnes</th>
+                <th className="py-3.5 px-4">Mn Grade (%)</th>
+                <th className="py-3.5 px-4 text-right rounded-r-xl">Operational Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
               {blocks.map((block) => (
-                <tr key={block.block_code} className="hover:bg-slate-50 transition">
-                  <td className="py-3 px-4 font-mono font-bold text-[#1E3A8A]">
+                <tr key={block.block_code} className="hover:bg-[#F8FAFC] transition">
+                  <td className="py-3.5 px-4 font-mono font-bold text-[#313896]">
                     {block.block_code}
                   </td>
-                  <td className="py-3 px-4 font-mono font-semibold">{block.development_pct}%</td>
-                  <td className="py-3 px-4 font-mono font-semibold">{block.access_pct}%</td>
-                  <td className="py-3 px-4 font-mono font-semibold">{block.drilling_pct}%</td>
-                  <td className="py-3 px-4 font-mono font-semibold">{block.blasting_pct}%</td>
-                  <td className="py-3 px-4">
+                  <td className="py-3.5 px-4 font-mono font-semibold">{block.development_pct}%</td>
+                  <td className="py-3.5 px-4 font-mono font-semibold">{block.access_pct}%</td>
+                  <td className="py-3.5 px-4 font-mono font-semibold">{block.drilling_pct}%</td>
+                  <td className="py-3.5 px-4 font-mono font-semibold">{block.blasting_pct}%</td>
+                  <td className="py-3.5 px-4">
                     <span className={getReadinessBadge(block.readiness_score)}>
                       {block.readiness_score}%
                     </span>
                   </td>
-                  <td className="py-3 px-4 font-mono">{block.estimated_ore_tonnes.toLocaleString()} MT</td>
-                  <td className="py-3 px-4 font-bold text-slate-900">{block.mn_grade_pct}% Mn</td>
-                  <td className="py-3 px-4 text-right font-mono font-semibold text-[#0B192C]">
+                  <td className="py-3.5 px-4 font-mono">{block.estimated_ore_tonnes.toLocaleString()} MT</td>
+                  <td className="py-3.5 px-4 font-bold text-slate-900">{block.mn_grade_pct}% Mn</td>
+                  <td className="py-3.5 px-4 text-right font-mono font-semibold text-[#313896]">
                     {block.status}
                   </td>
                 </tr>
@@ -123,10 +123,10 @@ export const MineTwin: React.FC = () => {
       <div className="pt-2 text-right">
         <Link
           to="/production"
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#1E3A8A] hover:bg-[#0B192C] text-white text-xs font-bold rounded-lg transition shadow"
+          className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#313896] hover:bg-[#282D7A] text-white text-xs font-bold rounded-full transition shadow-sm"
         >
           <span>View ShortfallShield Production Forecasts & SHAP Analysis</span>
-          <ChevronRight className="w-4 h-4 text-amber-400" />
+          <ChevronRight className="w-4 h-4 text-amber-300" />
         </Link>
       </div>
     </div>

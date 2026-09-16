@@ -55,50 +55,50 @@ export const TargetAnalysis: React.FC = () => {
         message="DRILLTARGET AI & MULTI-SOURCE EVIDENCE SUMMARY — Target ID Persistent Handoff" 
       />
 
-      <Link to="/drill-planning" className="inline-flex items-center gap-1.5 text-xs font-bold text-[#1E3A8A] hover:underline">
+      <Link to="/drill-planning" className="inline-flex items-center gap-1.5 text-xs font-bold text-[#313896] hover:underline">
         <ArrowLeft className="w-4 h-4" />
         <span>Return to Drill Target Queue</span>
       </Link>
 
       {/* Header Banner */}
-      <div className="bg-[#0B192C] text-white p-6 rounded-xl border border-slate-700 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-gradient-to-r from-[#1B2170] via-[#313896] to-[#3B42A6] text-white p-6 rounded-2xl border border-[#2B308B] shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-xs font-bold text-amber-400 uppercase tracking-wider">
-            <Target className="w-4 h-4 text-amber-400" />
+          <div className="flex items-center gap-2 text-xs font-bold text-amber-300 uppercase tracking-wider">
+            <Target className="w-4 h-4 text-amber-300" />
             <span>PERSISTENT TARGET ID: {target.target_id}</span>
           </div>
           <h1 className="text-2xl font-bold font-serif text-white mt-1 flex items-center gap-3">
             <span>Target Analysis & Drilling Recommendation</span>
-            <span className="text-xs font-sans font-semibold bg-red-900/80 text-red-300 border border-red-700 px-2.5 py-0.5 rounded-full">
+            <span className="text-xs font-sans font-semibold bg-red-600 text-white px-3 py-1 rounded-full shadow-sm">
               {target.priority_level} Priority
             </span>
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-blue-100/90 mt-1">
             Multi-source geospatial evidence summary & structural lineament analysis for diamond core site selection
           </p>
         </div>
-        <div className="bg-[#0F172A] p-3.5 rounded-lg border border-slate-700 text-xs font-mono space-y-1">
-          <div className="flex justify-between gap-4">
-            <span className="text-slate-400">PU Score:</span>
-            <strong className="text-emerald-400 font-bold">{(target.prospectivity_score * 100).toFixed(1)}%</strong>
+        <div className="bg-[#1B2170]/80 backdrop-blur-sm p-4 rounded-xl border border-white/20 text-xs font-mono space-y-1.5 shadow-inner">
+          <div className="flex justify-between gap-6">
+            <span className="text-blue-200">PU Score:</span>
+            <strong className="text-emerald-300 font-bold">{(target.prospectivity_score * 100).toFixed(1)}%</strong>
           </div>
-          <div className="flex justify-between gap-4">
-            <span className="text-slate-400">Confidence:</span>
-            <strong className="text-cyan-300 font-bold">{target.confidence_pct}%</strong>
+          <div className="flex justify-between gap-6">
+            <span className="text-blue-200">Confidence:</span>
+            <strong className="text-cyan-200 font-bold">{target.confidence_pct}%</strong>
           </div>
-          <div className="flex justify-between gap-4">
-            <span className="text-slate-400">Applicability:</span>
-            <strong className="text-blue-400 font-bold">{target.applicability}</strong>
+          <div className="flex justify-between gap-6">
+            <span className="text-blue-200">Applicability:</span>
+            <strong className="text-white font-bold">{target.applicability}</strong>
           </div>
         </div>
       </div>
 
       {/* Scientific Safety Warning Banner */}
-      <div className="bg-amber-950/80 border border-amber-700 p-4 rounded-xl text-amber-200 text-xs flex items-start gap-3">
-        <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+      <div className="bg-[#FFF8F0] border border-amber-300/80 p-4 rounded-xl text-amber-900 text-xs flex items-start gap-3 shadow-sm">
+        <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
         <div className="space-y-0.5">
-          <strong className="text-white font-bold text-sm">Scientific Safety Disclaimer & Workflow Mandate</strong>
-          <p>
+          <strong className="text-amber-950 font-bold text-sm">Scientific Safety Disclaimer & Workflow Mandate</strong>
+          <p className="text-amber-800">
             {target.scientific_safety_note || "Priority exploration target — Requires field validation."} Remote sensing surface spectral anomalies & SAR lineaments indicate potential structural controls only; underground manganese ore must be confirmed via field mapping and diamond core drilling.
           </p>
         </div>
@@ -107,15 +107,15 @@ export const TargetAnalysis: React.FC = () => {
       {/* 4 Multi-Source Evidence Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Spectral Evidence */}
-        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-2">
-          <div className="flex items-center justify-between text-xs font-bold text-[#1E3A8A] border-b pb-2">
+        <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-sm space-y-3">
+          <div className="flex items-center justify-between text-xs font-bold text-[#313896] border-b border-slate-100 pb-2.5">
             <span className="flex items-center gap-1.5">
               <Sparkles className="w-4 h-4 text-cyan-600" />
               <span>Spectral Evidence</span>
             </span>
-            <span className="text-[10px] font-mono text-cyan-700 bg-cyan-50 px-1.5 py-0.5 rounded">CEM FIR</span>
+            <span className="text-[10px] font-mono text-[#313896] bg-[#EBEFFA] px-2 py-0.5 rounded-full border border-[#D0DCF5]">CEM FIR</span>
           </div>
-          <div className="space-y-1 text-xs text-slate-700 font-sans">
+          <div className="space-y-1.5 text-xs text-slate-700 font-sans">
             <div className="flex justify-between">
               <span className="text-slate-500">CEM Target Abundance:</span>
               <strong className="font-mono text-cyan-700">{target.evidence?.cem_anomaly || 0.88}</strong>
@@ -132,15 +132,15 @@ export const TargetAnalysis: React.FC = () => {
         </div>
 
         {/* Geophysical Evidence */}
-        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-2">
-          <div className="flex items-center justify-between text-xs font-bold text-[#1E3A8A] border-b pb-2">
+        <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-sm space-y-3">
+          <div className="flex items-center justify-between text-xs font-bold text-[#313896] border-b border-slate-100 pb-2.5">
             <span className="flex items-center gap-1.5">
               <Activity className="w-4 h-4 text-emerald-600" />
               <span>Geophysics & DEM</span>
             </span>
-            <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">Gravity</span>
+            <span className="text-[10px] font-mono text-[#313896] bg-[#EBEFFA] px-2 py-0.5 rounded-full border border-[#D0DCF5]">Gravity</span>
           </div>
-          <div className="space-y-1 text-xs text-slate-700 font-sans">
+          <div className="space-y-1.5 text-xs text-slate-700 font-sans">
             <div className="flex justify-between">
               <span className="text-slate-500">Gravity Anomaly:</span>
               <strong className="font-mono text-emerald-700">{target.evidence?.geophysics_gravity || 0.62} mGal</strong>
@@ -157,15 +157,15 @@ export const TargetAnalysis: React.FC = () => {
         </div>
 
         {/* Geological Context */}
-        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-2">
-          <div className="flex items-center justify-between text-xs font-bold text-[#1E3A8A] border-b pb-2">
+        <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-sm space-y-3">
+          <div className="flex items-center justify-between text-xs font-bold text-[#313896] border-b border-slate-100 pb-2.5">
             <span className="flex items-center gap-1.5">
               <Layers className="w-4 h-4 text-purple-600" />
               <span>Geology & Lineaments</span>
             </span>
-            <span className="text-[10px] font-mono text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded">GSI Sausar</span>
+            <span className="text-[10px] font-mono text-[#313896] bg-[#EBEFFA] px-2 py-0.5 rounded-full border border-[#D0DCF5]">GSI Sausar</span>
           </div>
-          <div className="space-y-1 text-xs text-slate-700 font-sans">
+          <div className="space-y-1.5 text-xs text-slate-700 font-sans">
             <div className="flex justify-between">
               <span className="text-slate-500">Formation:</span>
               <strong className="font-sans truncate text-purple-900">{target.geology_match}</strong>
@@ -182,15 +182,15 @@ export const TargetAnalysis: React.FC = () => {
         </div>
 
         {/* Known Occurrences & Geochemistry */}
-        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-2">
-          <div className="flex items-center justify-between text-xs font-bold text-[#1E3A8A] border-b pb-2">
+        <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-sm space-y-3">
+          <div className="flex items-center justify-between text-xs font-bold text-[#313896] border-b border-slate-100 pb-2.5">
             <span className="flex items-center gap-1.5">
               <MapPin className="w-4 h-4 text-amber-600" />
               <span>Geochemistry</span>
             </span>
-            <span className="text-[10px] font-mono text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded">Assays</span>
+            <span className="text-[10px] font-mono text-[#313896] bg-[#EBEFFA] px-2 py-0.5 rounded-full border border-[#D0DCF5]">Assays</span>
           </div>
-          <div className="space-y-1 text-xs text-slate-700 font-sans">
+          <div className="space-y-1.5 text-xs text-slate-700 font-sans">
             <div className="flex justify-between">
               <span className="text-slate-500">Stream Mn (ppm):</span>
               <strong className="font-mono text-purple-700">{target.evidence?.geochemistry_mn_ppm || 2840} ppm</strong>
@@ -208,14 +208,14 @@ export const TargetAnalysis: React.FC = () => {
       </div>
 
       {/* Target Handoff & Drilling Recommendation Details */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-4">
-        <h3 className="text-base font-bold text-[#0B192C] font-serif border-b border-slate-200 pb-3 flex items-center justify-between">
+      <div className="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-sm space-y-4">
+        <h3 className="text-base font-bold text-[#313896] font-serif border-b border-slate-100 pb-3 flex items-center justify-between">
           <span>Drilling Recommendation & Handoff Action Plan</span>
           <span className="text-xs text-slate-500 font-mono">Target ID: {target.target_id}</span>
         </h3>
 
-        <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-2 text-xs">
-          <strong className="text-sm font-bold text-[#0B192C] font-serif block">Recommended Field Action:</strong>
+        <div className="p-4 bg-[#F8FAFC] border border-slate-200/80 rounded-xl space-y-2 text-xs">
+          <strong className="text-sm font-bold text-[#313896] font-serif block">Recommended Field Action:</strong>
           <p className="text-slate-700 leading-relaxed font-sans">
             {target.recommended_action} Execute 120m diamond core drilling inclined at -90° to confirm pyrolusite ore bed continuity across the Mansar quartzitic contact.
           </p>
@@ -224,17 +224,17 @@ export const TargetAnalysis: React.FC = () => {
         <div className="pt-2 flex flex-wrap items-center justify-end gap-3">
           <Link
             to={`/field-survey?target_id=${target.target_id}`}
-            className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold text-xs rounded-lg transition shadow flex items-center gap-2"
+            className="px-6 py-2.5 bg-[#313896] hover:bg-[#282D7A] text-white font-bold text-xs rounded-full transition shadow-sm flex items-center gap-2"
           >
             <FileText className="w-4 h-4" />
             <span>Open Field Survey PWA</span>
           </Link>
           <Link
             to="/drill-planning"
-            className="px-5 py-2.5 bg-[#1E3A8A] hover:bg-[#0B192C] text-white font-bold text-xs rounded-lg transition shadow flex items-center gap-2"
+            className="px-6 py-2.5 bg-[#313896] hover:bg-[#282D7A] text-white font-bold text-xs rounded-full transition shadow-sm flex items-center gap-2"
           >
             <span>Return to Drill Queue</span>
-            <ChevronRight className="w-4 h-4 text-amber-400" />
+            <ChevronRight className="w-4 h-4 text-amber-300" />
           </Link>
         </div>
       </div>

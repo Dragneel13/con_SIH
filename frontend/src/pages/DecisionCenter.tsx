@@ -96,30 +96,30 @@ export const DecisionCenter: React.FC = () => {
       )}
 
       {/* Page Title Header */}
-      <div className="bg-[#0B192C] text-white p-6 rounded-xl border border-slate-700 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-gradient-to-r from-[#1B2170] via-[#313896] to-[#3B42A6] text-white p-6 rounded-2xl border border-[#2B308B] shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-xs font-bold text-amber-400 uppercase tracking-wider">
-            <Zap className="w-4 h-4 text-amber-400 fill-amber-400" />
+          <div className="flex items-center gap-2 text-xs font-bold text-amber-300 uppercase tracking-wider">
+            <Zap className="w-4 h-4 text-amber-300 fill-amber-300" />
             <span>MOIL PRESCRIPTIVE MINE OPTIMIZER ENGINE</span>
           </div>
           <h1 className="text-2xl font-bold font-serif text-white mt-1">
             Prescriptive Mine Optimizer & Feasible Recovery Queue
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-blue-100/90 mt-1">
             Mixed-Integer Constraint Solver evaluating block readiness, equipment availability, and crusher capacity
           </p>
         </div>
 
         {/* Horizon Switcher */}
-        <div className="flex items-center gap-2 bg-[#0F172A] p-1.5 rounded-lg border border-slate-700">
+        <div className="flex items-center gap-2 bg-[#1B2170]/80 backdrop-blur-sm p-1.5 rounded-full border border-white/20 shadow-inner">
           {[7, 15, 30].map((hDays) => (
             <button
               key={hDays}
               onClick={() => setSelectedHorizon(hDays)}
-              className={`px-3.5 py-1.5 rounded-md font-bold text-xs transition ${
+              className={`px-4 py-1.5 rounded-full font-bold text-xs transition ${
                 selectedHorizon === hDays
-                  ? 'bg-amber-500 text-slate-900 shadow'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                  ? 'bg-white text-[#313896] shadow-sm'
+                  : 'text-blue-100 hover:text-white hover:bg-white/10'
               }`}
             >
               {hDays} Days
@@ -130,78 +130,78 @@ export const DecisionCenter: React.FC = () => {
 
       {/* SECTION 1: CURRENT RISK SUMMARY CARD */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+        <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-sm">
           <span className="text-xs text-slate-500 font-semibold block">Target Production</span>
-          <strong className="text-xl font-bold text-[#0B192C] font-mono">
+          <strong className="text-xl font-bold text-[#313896] font-mono">
             {selectedHorizon === 7 ? '2,800' : selectedHorizon === 15 ? '6,000' : '12,000'} MT
           </strong>
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+        <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-sm">
           <span className="text-xs text-slate-500 font-semibold block">Predicted Output</span>
-          <strong className="text-xl font-bold text-blue-900 font-mono">
+          <strong className="text-xl font-bold text-[#313896] font-mono">
             {selectedHorizon === 7 ? '2,450' : selectedHorizon === 15 ? '5,120' : '9,840'} MT
           </strong>
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+        <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-sm">
           <span className="text-xs text-slate-500 font-semibold block">Expected Shortfall</span>
           <strong className="text-xl font-bold text-red-600 font-mono">
             -{selectedHorizon === 7 ? '350' : selectedHorizon === 15 ? '880' : '2,160'} MT
           </strong>
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex items-center justify-between">
+        <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-sm flex items-center justify-between">
           <div>
             <span className="text-xs text-slate-500 font-semibold block">Operational Risk</span>
             <span className="text-xs font-bold text-red-700 font-mono">
               {selectedHorizon === 7 ? '68.5% Probability' : selectedHorizon === 15 ? '74.2% Probability' : '81.0% Probability'}
             </span>
           </div>
-          <span className="bg-red-600 text-white font-extrabold text-xs px-2.5 py-1 rounded">
+          <span className="bg-red-600 text-white font-extrabold text-xs px-3 py-1 rounded-full shadow-sm">
             {selectedHorizon === 7 ? 'MEDIUM' : 'HIGH'}
           </span>
         </div>
       </div>
 
       {/* SECTION 2: CONTEXTUAL SHAP ROOT CAUSES */}
-      <div className="bg-slate-900 text-white rounded-xl border border-slate-700 p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+      <div className="bg-[#EBEFFA] border border-[#D0DCF5] text-[#313896] rounded-2xl p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-2">
-          <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0" />
+          <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0" />
           <div>
-            <span className="font-bold text-amber-400">Contextual SHAP Guidance:</span>
-            <span className="text-slate-300 ml-1.5">
+            <span className="font-bold text-[#313896]">Contextual SHAP Guidance:</span>
+            <span className="text-slate-700 ml-1.5 font-sans">
               Equipment downtime (EX-104) & Block B-09 readiness delays drive {selectedHorizon}-day deficit. Optimizer prioritizing alternate ready blocks and LHD redeployment.
             </span>
           </div>
         </div>
-        <span className="text-[10px] font-mono text-cyan-300 bg-blue-950 border border-blue-700 px-2 py-1 rounded shrink-0">
+        <span className="text-[10px] font-mono text-[#313896] bg-white border border-[#D0DCF5] px-2.5 py-1 rounded-full shrink-0 shadow-sm font-semibold">
           Tree SHAP Context Linked
         </span>
       </div>
 
       {/* SECTION 3: RECOMMENDED FEASIBLE CANDIDATE PLANS */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-          <h2 className="text-base font-bold text-[#0B192C] font-serif flex items-center gap-2">
+      <div className="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-sm space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <h2 className="text-base font-bold text-[#313896] font-serif flex items-center gap-2">
             <span>Candidate Recovery Plans (MILP Constraint Optimizer)</span>
           </h2>
           <div className="flex items-center gap-2">
             {candidatePlans.length > 1 && (
               <button
                 onClick={() => setCompareModalOpen(true)}
-                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-lg transition"
+                className="px-3.5 py-1.5 bg-[#EBEFFA] text-[#313896] hover:bg-[#D0DCF5] text-xs font-bold rounded-full transition border border-[#D0DCF5]"
               >
                 Compare Plans
               </button>
             )}
-            <span className="text-xs text-slate-500 font-mono">{candidatePlans.length} Feasible Option(s)</span>
+            <span className="text-xs text-[#313896] font-mono bg-[#EBEFFA] px-2.5 py-1 rounded-full border border-[#D0DCF5]">{candidatePlans.length} Feasible Option(s)</span>
           </div>
         </div>
 
         {/* INFEASIBLE NOTICE (Requirement 11 Edge Case 7) */}
         {isInfeasible ? (
-          <div className="bg-red-50 border border-red-300 p-6 rounded-xl text-center space-y-2">
+          <div className="bg-red-50 border border-red-300 p-6 rounded-2xl text-center space-y-2">
             <ShieldAlert className="w-10 h-10 text-red-600 mx-auto" />
             <h3 className="text-base font-bold text-red-900">
               No feasible recovery plan found under current constraints.
@@ -215,15 +215,15 @@ export const DecisionCenter: React.FC = () => {
             {candidatePlans.map((plan) => (
               <div 
                 key={plan.plan_id}
-                className="bg-slate-50 rounded-xl border border-slate-300 p-5 space-y-4 hover:border-blue-500 transition shadow-sm flex flex-col justify-between"
+                className="bg-[#F8FAFC] rounded-2xl border border-slate-200/80 p-5 space-y-4 hover:border-[#313896] transition shadow-sm flex flex-col justify-between"
               >
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                    <span className="font-serif font-bold text-sm text-[#0B192C]">{plan.plan_name}</span>
-                    <span className={`font-extrabold text-[10px] px-2 py-0.5 rounded ${
+                  <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
+                    <span className="font-serif font-bold text-base text-[#313896]">{plan.plan_name}</span>
+                    <span className={`font-extrabold text-[10px] px-2.5 py-0.5 rounded-full ${
                       plan.feasibility === 'FEASIBLE'
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : 'bg-amber-100 text-amber-800'
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                        : 'bg-amber-100 text-amber-800 border border-amber-200'
                     }`}>
                       {plan.feasibility}
                     </span>
@@ -233,8 +233,8 @@ export const DecisionCenter: React.FC = () => {
                   <div className="space-y-2 text-xs">
                     <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Corrective Actions:</span>
                     {plan.actions.map((act, idx) => (
-                      <div key={idx} className="p-2 bg-white rounded border border-slate-200 text-slate-700 space-y-0.5">
-                        <div className="font-bold text-[#1E3A8A] flex items-center justify-between">
+                      <div key={idx} className="p-2.5 bg-white rounded-xl border border-slate-200/80 text-slate-700 space-y-0.5 shadow-sm">
+                        <div className="font-bold text-[#313896] flex items-center justify-between">
                           <span>{act.action_type}</span>
                           <span className="text-emerald-700 font-mono">+{act.impact_tonnes} MT</span>
                         </div>
@@ -250,7 +250,7 @@ export const DecisionCenter: React.FC = () => {
                       {plan.constraints_status.map((c, cIdx) => (
                         <div key={cIdx} className="flex items-center justify-between text-slate-600 font-sans">
                           <span>{c.constraint}</span>
-                          <span className={`font-bold px-1.5 py-0.2 rounded text-[10px] ${
+                          <span className={`font-bold px-2 py-0.5 rounded-full text-[10px] ${
                             c.status === 'PASS' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
                           }`}>
                             {c.status}
@@ -261,25 +261,25 @@ export const DecisionCenter: React.FC = () => {
                   </div>
 
                   {/* Output Recovery Numbers */}
-                  <div className="p-3 bg-blue-950 text-white rounded-lg text-xs space-y-1 font-mono">
+                  <div className="p-3.5 bg-[#313896] text-white rounded-xl text-xs space-y-1 font-mono shadow-sm">
                     <div className="flex justify-between">
-                      <span className="text-slate-300">Expected Recovery:</span>
-                      <strong className="text-emerald-400 font-bold">+{plan.expected_recovery_tonnes} MT</strong>
+                      <span className="text-blue-200">Expected Recovery:</span>
+                      <strong className="text-emerald-300 font-bold">+{plan.expected_recovery_tonnes} MT</strong>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-300">Remaining Shortfall:</span>
-                      <strong className="text-amber-400 font-bold">{plan.remaining_shortfall_tonnes} MT</strong>
+                      <span className="text-blue-200">Remaining Shortfall:</span>
+                      <strong className="text-amber-300 font-bold">{plan.remaining_shortfall_tonnes} MT</strong>
                     </div>
                   </div>
                 </div>
 
                 {/* Apply Button (Requires User Review - Requirement 10) */}
-                <div className="pt-3 border-t border-slate-200">
+                <div className="pt-3 border-t border-slate-200/80">
                   <button
                     onClick={() => setSelectedPlanModal(plan)}
-                    className="w-full py-2.5 bg-[#1E3A8A] hover:bg-[#0B192C] text-white font-bold text-xs rounded-lg transition shadow flex items-center justify-center gap-2"
+                    className="w-full py-2.5 bg-[#313896] hover:bg-[#282D7A] text-white font-bold text-xs rounded-full transition shadow-sm flex items-center justify-center gap-2"
                   >
-                    <CheckCircle2 className="w-4 h-4 text-amber-400" />
+                    <CheckCircle2 className="w-4 h-4 text-amber-300" />
                     <span>Apply {plan.plan_id}</span>
                   </button>
                 </div>
@@ -292,10 +292,10 @@ export const DecisionCenter: React.FC = () => {
       {/* APPROVAL MODAL (Human-in-the-Loop Review - Requirement 10) */}
       {selectedPlanModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl border border-slate-300 w-full max-w-lg overflow-hidden animate-scaleIn">
-            <div className="bg-[#0B192C] text-white p-4 flex items-center justify-between border-b border-slate-700">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-300 w-full max-w-lg overflow-hidden animate-scaleIn">
+            <div className="bg-gradient-to-r from-[#1B2170] via-[#313896] to-[#3B42A6] text-white p-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Zap className="w-5 h-5 text-amber-400 fill-amber-400" />
+                <Zap className="w-5 h-5 text-amber-300 fill-amber-300" />
                 <h3 className="font-bold text-sm uppercase tracking-wide">
                   Review & Approve Plan — {selectedPlanModal.plan_name}
                 </h3>
