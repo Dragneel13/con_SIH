@@ -28,6 +28,7 @@ from app.api import (
     blocks,
     recommendations,
     field,
+    drilling,
 )
 from app.database import check_db_connection
 
@@ -108,6 +109,7 @@ app.include_router(security.router, prefix="/api", tags=["Security Center"])
 app.include_router(mines.router, prefix="/api", tags=["Mines"])
 app.include_router(exploration.router, prefix="/api", tags=["Exploration"])
 app.include_router(targets.router, prefix="/api", tags=["Drill Targets"])
+app.include_router(drilling.router, prefix="/api", tags=["Closed-Loop Drilling & Ground Truth"])
 app.include_router(production.router, prefix="/api", tags=["Production"])
 app.include_router(equipment.router, prefix="/api", tags=["Equipment"])
 app.include_router(blocks.router, prefix="/api", tags=["Mine Blocks"])

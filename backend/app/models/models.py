@@ -157,6 +157,86 @@ class DrillTarget(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow)
 
+# ── CLOSED-LOOP EXPLORATION ENTITIES (Requirement 4) ───────────────────────
+
+class FieldObservation(Base):
+    __tablename__ = "field_observations"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    observation_id = Column(String(100), unique=True, nullable=False)
+    target_id = Column(String(100), nullable=False)
+    latitude = Column(Numeric(12, 8), nullable=False)
+    longitude = Column(Numeric(12, 8), nullable=False)
+    elevation_m = Column(Numeric(10, 2), default=300.0)
+    observer_name = Column(String(255))
+    lithology = Column(String(255))
+    rock_type = Column(String(100))
+    sample_id = Column(String(100))
+    photo_url = Column(Text)
+    drillhole_id = Column(String(100))
+    sync_status = Column(String(50), default="Synced") # "Saved Offline", "Pending Sync", "Synced", "Sync Failed"
+    notes = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class Drillhole(Base):
+    __tablename__ = "drillholes"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    drillhole_id = Column(String(100), unique=True, nullable=False)
+    target_id = Column(String(100), nullable=False)
+    latitude = Column(Numeric(12, 8), nullable=False)
+    longitude = Column(Numeric(12, 8), nullable=False)
+    elevation_m = Column(Numeric(10, 2), default=320.0)
+    total_depth_m = Column(Numeric(10, 2), nullable=False)
+    dip_deg = Column(Numeric(5, 2), default=-90.0)
+    azimuth_deg = Column(Numeric(5, 2), default=0.0)
+    drilling_method = Column(String(100), default="Diamond Core")
+    status = Column(String(50), default="COMPLETED") # PLANNED, DRILLING, COMPLETED
+    drilled_date = Column(DateTime, default=datetime.utcnow)
+    contractor = Column(String(255), default="MOIL Exploration Wing")
+    notes = Column(Text)
+
+class Sample(Base):
+    __tablename__ = "samples"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    sample_id = Column(String(100), unique=True, nullable=False)
+    drillhole_id = Column(String(100), nullable=False)
+    target_id = Column(String(100), nullable=False)
+    from_depth_m = Column(Numeric(10, 2), nullable=False)
+    to_depth_m = Column(Numeric(10, 2), nullable=False)
+    lithology = Column(String(255))
+    sample_type = Column(String(100), default="Diamond Core Interval")
+    collected_by = Column(String(255))
+    collected_date = Column(DateTime, default=datetime.utcnow)
+    notes = Column(Text)
+
+class Assay(Base):
+    __tablename__ = "assays"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    assay_id = Column(String(100), unique=True, nullable=False)
+    sample_id = Column(String(100), nullable=False)
+    target_id = Column(String(100), nullable=False)
+    mn_grade_pct = Column(Numeric(8, 4), nullable=False)
+    fe_grade_pct = Column(Numeric(8, 4), default=8.5)
+    sio2_grade_pct = Column(Numeric(8, 4), default=12.4)
+    p_grade_pct = Column(Numeric(8, 4), default=0.15)
+    recovery_rate_pct = Column(Numeric(5, 2), default=92.5)
+    lab_name = Column(String(255), default="MOIL Central Analytical Lab")
+    assay_date = Column(DateTime, default=datetime.utcnow)
+    certified_by = Column(String(255), default="Dr. A. K. Sharma")
+
+class GroundTruth(Base):
+    __tablename__ = "ground_truth"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    ground_truth_id = Column(String(100), unique=True, nullable=False)
+    target_id = Column(String(100), nullable=False)
+    assay_id = Column(String(100), nullable=False)
+    validated_mn_pct = Column(Numeric(8, 4), nullable=False)
+    is_occurrence = Column(Boolean, default=True)
+    validation_status = Column(String(50), default="Pending Validation") # "Pending Validation", "Validated", "Rejected"
+    validated_by = Column(String(255))
+    validation_date = Column(DateTime)
+    notes = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 class Equipment(Base):
     __tablename__ = "equipment"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
