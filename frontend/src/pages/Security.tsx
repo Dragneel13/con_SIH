@@ -13,7 +13,7 @@ interface SecurityStatus {
   recent_failed_logins_count: number;
   total_audit_events_count: number;
   environment: string;
-  app_version: str;
+  app_version: string;
 }
 
 interface AuditLog {

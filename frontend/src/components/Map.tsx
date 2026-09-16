@@ -8,24 +8,22 @@ interface MapProps {
   height?: string;
   activeLayers?: Record<string, boolean>;
   selectedTarget?: string;
-  onMarkerClick?: (marker: any) => void;
+  onMarkerClick?: (targetId: string) => void;
 }
 
 export const Map: React.FC<MapProps> = ({
   initialCenter = [80.18, 21.83], // Balaghat, Madhya Pradesh coordinates
-  initialZoom = 10,
+  initialZoom = 9.8,
   height = '100%',
   activeLayers = {
     sentinel2: true,
     geology: true,
+    prospectivity: true,
     faults: true,
     occurrences: true,
-    prospectivity: true,
-    uncertainty: false,
-    geochemistry: true,
-    geophysics: false,
   },
-  selectedTarget
+  selectedTarget = 'Target-1',
+  onMarkerClick
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
@@ -64,7 +62,7 @@ export const Map: React.FC<MapProps> = ({
       attributionControl: false,
     });
 
-    map.current.addControl(new maplibregl.NavigationControl(), 'top-right');
+    map.current.addControl(new maplibregl.NavigationControl(), 'bottom-right');
     map.current.addControl(new maplibregl.ScaleControl({ maxWidth: 100, unit: 'metric' }), 'bottom-left');
 
     map.current.on('load', () => {
@@ -82,7 +80,7 @@ export const Map: React.FC<MapProps> = ({
               geometry: {
                 type: 'Polygon',
                 coordinates: [[
-                  [79.65, 21.65], [80.45, 21.65], [80.45, 21.98], [79.65, 21.98], [79.65, 21.65]
+                  [79.65, 21.60], [80.75, 21.60], [80.75, 22.05], [79.65, 22.05], [79.65, 21.60]
                 ]]
               }
             }
@@ -94,8 +92,8 @@ export const Map: React.FC<MapProps> = ({
         type: 'fill',
         source: 'sentinel2-source',
         paint: {
-          'fill-color': '#06B6D4',
-          'fill-opacity': 0.18
+          'fill-color': '#0284C7',
+          'fill-opacity': 0.15
         }
       });
 
@@ -111,7 +109,7 @@ export const Map: React.FC<MapProps> = ({
               geometry: {
                 type: 'Polygon',
                 coordinates: [[
-                  [79.70, 21.68], [80.10, 21.84], [80.48, 21.96], [80.45, 21.92], [79.72, 21.66], [79.70, 21.68]
+                  [79.70, 21.68], [80.10, 21.84], [80.72, 21.84], [80.45, 21.92], [79.72, 21.66], [79.70, 21.68]
                 ]]
               }
             }
@@ -123,61 +121,83 @@ export const Map: React.FC<MapProps> = ({
         type: 'fill',
         source: 'geology-source',
         paint: {
-          'fill-color': '#8B5CF6',
-          'fill-opacity': 0.35
+          'fill-color': '#7C3AED',
+          'fill-opacity': 0.3
         }
       });
 
-      // 3. Prospectivity Heatmap Raster (Vibrant Green Zone)
+      // 3. Prospectivity Heatmap Polygon Zones (Gradient Colors matching AI Heatmap in Screenshot)
       map.current.addSource('prospectivity-source', {
         type: 'geojson',
         data: {
           type: 'FeatureCollection',
           features: [
+            // Target 1 - Very High Red Zone
             {
               type: 'Feature',
-              properties: { prospectivity: 0.91, name: 'Target MN-042 (T-004)' },
+              properties: { prospectivity: 0.92, name: 'Target 1 (Very High)' },
               geometry: {
                 type: 'Polygon',
                 coordinates: [[
-                  [80.12, 21.82], [80.18, 21.82], [80.18, 21.87], [80.12, 21.87], [80.12, 21.82]
+                  [80.65, 21.80], [80.78, 21.80], [80.78, 21.88], [80.65, 21.88], [80.65, 21.80]
                 ]]
               }
             },
+            // Target 3 - Very High Red Zone
             {
               type: 'Feature',
-              properties: { prospectivity: 0.87, name: 'Target MN-018 (T-007)' },
+              properties: { prospectivity: 0.87, name: 'Target 3 (Very High)' },
               geometry: {
                 type: 'Polygon',
                 coordinates: [[
-                  [80.38, 21.93], [80.48, 21.93], [80.48, 21.99], [80.38, 21.99], [80.38, 21.93]
+                  [79.76, 21.87], [79.88, 21.87], [79.88, 21.95], [79.76, 21.95], [79.76, 21.87]
                 ]]
               }
             },
+            // Target 2 - High Orange Zone
             {
               type: 'Feature',
-              properties: { prospectivity: 0.82, name: 'Target MN-074 (T-011)' },
+              properties: { prospectivity: 0.76, name: 'Target 2 (High)' },
               geometry: {
                 type: 'Polygon',
                 coordinates: [[
-                  [79.66, 21.65], [79.74, 21.65], [79.74, 21.72], [79.66, 21.72], [79.66, 21.65]
+                  [79.86, 21.64], [79.98, 21.64], [79.98, 21.72], [79.86, 21.72], [79.86, 21.64]
+                ]]
+              }
+            },
+            // Target 4 - Medium Yellow Zone
+            {
+              type: 'Feature',
+              properties: { prospectivity: 0.69, name: 'Target 4 (Medium)' },
+              geometry: {
+                type: 'Polygon',
+                coordinates: [[
+                  [80.25, 21.58], [80.36, 21.58], [80.36, 21.66], [80.25, 21.66], [80.25, 21.58]
                 ]]
               }
             }
           ]
         }
       });
+
       map.current.addLayer({
         id: 'prospectivity-fill',
         type: 'fill',
         source: 'prospectivity-source',
         paint: {
-          'fill-color': '#10B981',
-          'fill-opacity': 0.55
+          'fill-color': [
+            'interpolate',
+            ['linear'],
+            ['get', 'prospectivity'],
+            0.5, '#EAB308',
+            0.75, '#F97316',
+            0.9, '#DC2626'
+          ],
+          'fill-opacity': 0.6
         }
       });
 
-      // 4. Structural Lineaments & Faults (Thick Red Lines)
+      // 4. Fault Lineaments
       map.current.addSource('faults-source', {
         type: 'geojson',
         data: {
@@ -188,15 +208,7 @@ export const Map: React.FC<MapProps> = ({
               properties: { name: 'Balaghat Thrust Fault F-1' },
               geometry: {
                 type: 'LineString',
-                coordinates: [[79.60, 21.64], [80.15, 21.85], [80.50, 21.98]]
-              }
-            },
-            {
-              type: 'Feature',
-              properties: { name: 'Ukwa Shear Contact F-2' },
-              geometry: {
-                type: 'LineString',
-                coordinates: [[80.10, 21.80], [80.45, 21.95]]
+                coordinates: [[79.60, 21.64], [80.15, 21.85], [80.75, 21.90]]
               }
             }
           ]
@@ -207,96 +219,9 @@ export const Map: React.FC<MapProps> = ({
         type: 'line',
         source: 'faults-source',
         paint: {
-          'line-color': '#EF4444',
-          'line-width': 4,
-          'line-dasharray': [3, 1]
-        }
-      });
-
-      // 5. Uncertainty Heatmap Layer (Amber Overlay)
-      map.current.addSource('uncertainty-source', {
-        type: 'geojson',
-        data: {
-          type: 'FeatureCollection',
-          features: [
-            {
-              type: 'Feature',
-              properties: { uncertainty: 0.35 },
-              geometry: {
-                type: 'Polygon',
-                coordinates: [[
-                  [79.80, 21.73], [80.00, 21.73], [80.00, 21.83], [79.80, 21.83], [79.80, 21.73]
-                ]]
-              }
-            }
-          ]
-        }
-      });
-      map.current.addLayer({
-        id: 'uncertainty-fill',
-        type: 'fill',
-        source: 'uncertainty-source',
-        paint: {
-          'fill-color': '#F59E0B',
-          'fill-opacity': 0.45
-        }
-      });
-
-      // 6. Geochemistry Anomaly Grid (Pink Zone)
-      map.current.addSource('geochemistry-source', {
-        type: 'geojson',
-        data: {
-          type: 'FeatureCollection',
-          features: [
-            {
-              type: 'Feature',
-              properties: { anomaly: 'High MnO Assay' },
-              geometry: {
-                type: 'Polygon',
-                coordinates: [[
-                  [80.10, 21.80], [80.25, 21.80], [80.25, 21.88], [80.10, 21.88], [80.10, 21.80]
-                ]]
-              }
-            }
-          ]
-        }
-      });
-      map.current.addLayer({
-        id: 'geochemistry-fill',
-        type: 'fill',
-        source: 'geochemistry-source',
-        paint: {
-          'fill-color': '#EC4899',
-          'fill-opacity': 0.4
-        }
-      });
-
-      // 7. Aeromagnetic Anomaly Grid (Blue Zone)
-      map.current.addSource('geophysics-source', {
-        type: 'geojson',
-        data: {
-          type: 'FeatureCollection',
-          features: [
-            {
-              type: 'Feature',
-              properties: { anomaly: 'Bouguer High' },
-              geometry: {
-                type: 'Polygon',
-                coordinates: [[
-                  [79.62, 21.62], [79.76, 21.62], [79.76, 21.70], [79.62, 21.70], [79.62, 21.62]
-                ]]
-              }
-            }
-          ]
-        }
-      });
-      map.current.addLayer({
-        id: 'geophysics-fill',
-        type: 'fill',
-        source: 'geophysics-source',
-        paint: {
-          'fill-color': '#3B82F6',
-          'fill-opacity': 0.35
+          'line-color': '#F59E0B',
+          'line-width': 2,
+          'line-dasharray': [3, 2]
         }
       });
     });
@@ -307,7 +232,7 @@ export const Map: React.FC<MapProps> = ({
     };
   }, [initialCenter, initialZoom]);
 
-  // Dynamically update map layers visibility & markers when activeLayers prop changes!
+  // Dynamically update map layers visibility & markers
   useEffect(() => {
     if (!map.current || !map.current.isStyleLoaded()) return;
 
@@ -315,10 +240,7 @@ export const Map: React.FC<MapProps> = ({
       sentinel2: 'sentinel2-fill',
       geology: 'geology-fill',
       prospectivity: 'prospectivity-fill',
-      faults: 'faults-line',
-      uncertainty: 'uncertainty-fill',
-      geochemistry: 'geochemistry-fill',
-      geophysics: 'geophysics-fill'
+      faults: 'faults-line'
     };
 
     Object.entries(layerMap).forEach(([key, layerId]) => {
@@ -332,167 +254,84 @@ export const Map: React.FC<MapProps> = ({
       }
     });
 
-    // Re-render Map Markers (Mines, Sample Points, Targets)
+    // Re-render Map Markers (Target Pins with Priority Labels matching Screenshot)
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
 
-    // Add Mine Markers
-    const mines = [
-      { name: 'North Balaghat Mine (BLG-01)', coords: [80.135, 21.88], type: 'Underground Lease', status: 'OPERATIONAL' },
-      { name: 'Central Balaghat Mine - Ukwa (BLG-02)', coords: [80.466, 21.971], type: 'Underground Lease', status: 'OPERATIONAL' },
-      { name: 'South Balaghat Mine - Tirodi (BLG-03)', coords: [79.719, 21.685], type: 'Mixed Lease (UG+OC)', status: 'OPERATIONAL' },
+    const targetPins = [
+      { id: 'Target-1', name: 'Target 1', label: 'Very High Priority', coords: [80.72, 21.84], status: 'Very High', color: 'bg-red-600' },
+      { id: 'Target-3', name: 'Target 3', label: 'High Priority', coords: [79.82, 21.91], status: 'Very High', color: 'bg-red-600' },
+      { id: 'Target-2', name: 'Target 2', label: 'High Priority', coords: [79.92, 21.68], status: 'High', color: 'bg-amber-500' },
+      { id: 'Target-4', name: 'Target 4', label: 'Medium Priority', coords: [80.31, 21.62], status: 'Medium', color: 'bg-yellow-500' },
     ];
 
-    mines.forEach((mine) => {
-      const el = document.createElement('div');
-      el.className = 'w-6 h-6 rounded-full bg-[#003366] border-2 border-amber-400 shadow-xl cursor-pointer flex items-center justify-center text-white text-[10px] font-bold';
-      el.innerText = '⛏';
-      
-      const m = new maplibregl.Marker({ element: el })
-        .setLngLat(mine.coords as [number, number])
+    targetPins.forEach((pin) => {
+      const isSelected = selectedTarget === pin.id || (selectedTarget === 'Target-1' && pin.id === 'Target-1');
+      const container = document.createElement('div');
+      container.className = 'flex flex-col items-center cursor-pointer group z-20';
+
+      // Pin Bubble Label (Matching Screenshot Pin Label style)
+      const labelDiv = document.createElement('div');
+      labelDiv.className = `px-2 py-1 rounded shadow-lg text-[10px] font-extrabold whitespace-nowrap mb-1 transition-transform ${
+        isSelected ? 'bg-white text-slate-900 ring-2 ring-amber-400 scale-110' : 'bg-[#0F172A]/90 text-white border border-slate-700'
+      }`;
+      labelDiv.innerHTML = `
+        <div class="flex items-center gap-1">
+          <span class="w-2 h-2 rounded-full ${pin.color}"></span>
+          <span>${pin.name}</span>
+          <span class="text-[9px] opacity-75 font-normal">(${pin.label})</span>
+        </div>
+      `;
+
+      // Marker Dot
+      const dotDiv = document.createElement('div');
+      dotDiv.className = `w-4 h-4 rounded-full ${pin.color} border-2 border-white shadow-xl ${isSelected ? 'ring-4 ring-amber-400 scale-125' : ''}`;
+
+      container.appendChild(labelDiv);
+      container.appendChild(dotDiv);
+
+      container.onclick = () => {
+        if (onMarkerClick) onMarkerClick(pin.id);
+      };
+
+      const m = new maplibregl.Marker({ element: container })
+        .setLngLat(pin.coords as [number, number])
         .setPopup(new maplibregl.Popup({ offset: 12 }).setHTML(`
-          <div class="text-slate-900 p-1.5 text-xs font-sans">
-            <strong class="text-[#003366]">${mine.name}</strong><br/>
-            Type: <span class="font-semibold">${mine.type}</span><br/>
-            Status: <span class="text-emerald-700 font-bold">${mine.status}</span>
+          <div class="text-slate-900 p-2 text-xs font-sans">
+            <strong class="text-[#003366]">${pin.name} (${pin.label})</strong><br/>
+            Location: <span class="font-mono">${pin.coords[1]}° N, ${pin.coords[0]}° E</span><br/>
+            Status: <span class="font-bold text-emerald-700">${pin.status}</span>
           </div>
         `))
         .addTo(map.current!);
+
       markersRef.current.push(m);
     });
 
-    // Add Drill Targets Markers (T-004 / MN-042, T-007 / MN-018, T-011 / MN-074)
-    if (activeLayers.prospectivity !== false || activeLayers.occurrences !== false) {
-      const targets = [
-        { id: 'T-004', name: 'Target T-004 (MN-042)', coords: [80.14, 21.84], prob: '91%', conf: '87% HIGH' },
-        { id: 'T-007', name: 'Target T-007 (MN-018)', coords: [80.44, 21.965], prob: '87%', conf: '83% HIGH' },
-        { id: 'T-011', name: 'Target T-011 (MN-074)', coords: [79.71, 21.69], prob: '84%', conf: '81% HIGH' },
-      ];
+    // Key Location Place Name Labels (Balaghat, Tirodi, Ukwa)
+    const placeNames = [
+      { name: 'Balaghat', coords: [80.18, 21.82] },
+      { name: 'Tirodi', coords: [79.71, 21.68] },
+      { name: 'Ukwa', coords: [80.46, 21.96] },
+    ];
 
-      targets.forEach((tgt) => {
-        const isSelected = selectedTarget === tgt.id || selectedTarget === 'MN-042';
-        const el = document.createElement('div');
-        el.className = `w-7 h-7 rounded-full bg-red-600 border-2 border-white shadow-2xl cursor-pointer flex items-center justify-center text-white text-[10px] font-extrabold ${isSelected ? 'ring-4 ring-amber-400 scale-125' : 'animate-bounce'}`;
-        el.innerText = '🎯';
+    placeNames.forEach((place) => {
+      const el = document.createElement('div');
+      el.className = 'text-white text-xs font-bold font-sans tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] flex items-center gap-1';
+      el.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-white"></span><span>${place.name}</span>`;
 
-        const m = new maplibregl.Marker({ element: el })
-          .setLngLat(tgt.coords as [number, number])
-          .setPopup(new maplibregl.Popup({ offset: 12 }).setHTML(`
-            <div class="text-slate-900 p-1.5 text-xs font-sans">
-              <strong class="text-red-700">${tgt.name}</strong><br/>
-              Prospectivity: <span class="text-emerald-700 font-extrabold">${tgt.prob}</span><br/>
-              Confidence: <span class="font-bold text-slate-800">${tgt.conf}</span><br/>
-              <span class="text-[10px] text-blue-900 font-bold">Recommended: Field Core Drill</span>
-            </div>
-          `))
-          .addTo(map.current!);
-        markersRef.current.push(m);
-      });
-    }
+      const m = new maplibregl.Marker({ element: el })
+        .setLngLat(place.coords as [number, number])
+        .addTo(map.current!);
 
-    // Add Geochemical Occurrence Sample Point Markers if active
-    if (activeLayers.occurrences !== false || activeLayers.geochemistry !== false) {
-      const samplePoints = [
-        { name: 'Mn Geochem Sample S-01', coords: [79.630, 21.657], mn_pct: 38.5 },
-        { name: 'Mn Geochem Sample S-04', coords: [79.680, 21.690], mn_pct: 32.1 },
-        { name: 'Mn Geochem Sample S-15', coords: [79.740, 21.745], mn_pct: 35.8 },
-        { name: 'Mn Geochem Sample S-45', coords: [80.220, 21.860], mn_pct: 39.1 }
-      ];
+      markersRef.current.push(m);
+    });
 
-      samplePoints.forEach((pt) => {
-        const el = document.createElement('div');
-        el.className = 'w-3.5 h-3.5 rounded-full bg-emerald-600 border-2 border-white shadow cursor-pointer';
-        
-        const m = new maplibregl.Marker({ element: el })
-          .setLngLat(pt.coords as [number, number])
-          .setPopup(new maplibregl.Popup({ offset: 8 }).setHTML(`
-            <div class="text-slate-900 p-1.5 text-xs font-sans">
-              <strong class="text-emerald-800">${pt.name}</strong><br/>
-              MnO Concentration: <span class="text-emerald-700 font-bold">${pt.mn_pct}%</span> (GSI Ground Assay)
-            </div>
-          `))
-          .addTo(map.current!);
-        markersRef.current.push(m);
-      });
-    }
-  }, [activeLayers, selectedTarget]);
-
-  const activeCount = Object.values(activeLayers).filter(Boolean).length;
+  }, [activeLayers, selectedTarget, onMarkerClick]);
 
   return (
-    <div className="relative w-full h-full rounded border border-slate-300 overflow-hidden shadow-sm min-h-[550px]" style={{ height }}>
-      <div ref={mapContainer} className="w-full h-full min-h-[550px] bg-slate-100" />
-      
-      {/* Top Left AOI Badge */}
-      <div className="absolute top-3 left-3 bg-white/95 shadow-md px-3 py-1.5 rounded border border-slate-300 text-xs text-slate-800 pointer-events-none font-semibold z-10">
-        <span className="text-[#003366] font-bold">AOI Boundary:</span> Balaghat Manganese Belt (21.60° - 22.05° N, 79.60° - 80.46° E)
-      </div>
-
-      {/* Bottom Right Live Active Layers Legend */}
-      <div className="absolute bottom-4 right-4 bg-white/95 backdrop-blur-sm shadow-xl p-3 rounded-lg border border-slate-300 text-xs text-slate-800 pointer-events-none space-y-1.5 z-10 max-w-xs font-sans">
-        <div className="flex items-center justify-between border-b border-slate-200 pb-1">
-          <span className="font-extrabold text-[#003366] uppercase text-[10px] tracking-wider">Canvas Layer Legend</span>
-          <span className="bg-[#003366] text-white text-[10px] px-1.5 py-0.2 rounded font-mono font-bold">
-            {activeCount} Active
-          </span>
-        </div>
-        
-        {activeLayers.prospectivity && (
-          <div className="flex items-center gap-2 text-[11px]">
-            <span className="w-3 h-3 rounded bg-emerald-500 border border-emerald-700 shrink-0" />
-            <span>XGBoost Prospectivity (0.91 Max)</span>
-          </div>
-        )}
-
-        {activeLayers.faults && (
-          <div className="flex items-center gap-2 text-[11px]">
-            <span className="w-3 h-0.5 bg-red-600 shrink-0" />
-            <span>GSI Fault Lineaments (ISRO)</span>
-          </div>
-        )}
-
-        {activeLayers.geology && (
-          <div className="flex items-center gap-2 text-[11px]">
-            <span className="w-3 h-3 rounded bg-purple-500/70 border border-purple-700 shrink-0" />
-            <span>GSI Sausar Group Formations</span>
-          </div>
-        )}
-
-        {activeLayers.sentinel2 && (
-          <div className="flex items-center gap-2 text-[11px]">
-            <span className="w-3 h-3 rounded bg-cyan-500/60 border border-cyan-700 shrink-0" />
-            <span>Sentinel-2 NIR Surface Reflectance</span>
-          </div>
-        )}
-
-        {activeLayers.uncertainty && (
-          <div className="flex items-center gap-2 text-[11px]">
-            <span className="w-3 h-3 rounded bg-amber-500/70 border border-amber-700 shrink-0" />
-            <span>Ensemble Uncertainty Grid</span>
-          </div>
-        )}
-
-        {activeLayers.geochemistry && (
-          <div className="flex items-center gap-2 text-[11px]">
-            <span className="w-3 h-3 rounded bg-pink-500/70 border border-pink-700 shrink-0" />
-            <span>Geochemical Anomaly Grid</span>
-          </div>
-        )}
-
-        {activeLayers.geophysics && (
-          <div className="flex items-center gap-2 text-[11px]">
-            <span className="w-3 h-3 rounded bg-blue-500/70 border border-blue-700 shrink-0" />
-            <span>Aeromagnetic Anomaly Grid</span>
-          </div>
-        )}
-
-        {activeLayers.occurrences && (
-          <div className="flex items-center gap-2 text-[11px]">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 shrink-0" />
-            <span>160 GSI Manganese Occurrences</span>
-          </div>
-        )}
-      </div>
+    <div className="relative w-full h-full rounded-xl border border-slate-700 overflow-hidden shadow-inner min-h-[580px]" style={{ height }}>
+      <div ref={mapContainer} className="w-full h-full min-h-[580px] bg-[#0F172A]" />
     </div>
   );
 };
