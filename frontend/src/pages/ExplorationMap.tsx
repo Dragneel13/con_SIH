@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Map } from '../components/Map';
 import { PrototypeBadge } from '../components/PrototypeBadge';
@@ -120,6 +120,7 @@ export const ExplorationMap: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState('Dec 2024');
   const [selectedTargetId, setSelectedTargetId] = useState<string>('Target-1');
   const [activeTab, setActiveTab] = useState<'overview' | 'satellite' | 'geology' | 'geophysics' | 'geochemistry' | 'drilling'>('overview');
+  const [modelStatus, setModelStatus] = useState<string>('REAL_MODEL_LOADED');
 
   // Layer Toggles matching Screenshot Card 3
   const [activeLayers, setActiveLayers] = useState({
@@ -129,6 +130,18 @@ export const ExplorationMap: React.FC = () => {
     occurrences: true,
     lineaments: false,
   });
+
+  useEffect(() => {
+    // Fetch real backend prospectivity model status
+    fetch('/api/exploration/prospectivity')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && data.status) {
+          setModelStatus(data.status);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const toggleLayer = (key: keyof typeof activeLayers) => {
     setActiveLayers((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -217,7 +230,6 @@ export const ExplorationMap: React.FC = () => {
         
         {/* LEFT COLUMN: LARGE INTERACTIVE GIS MAP (7/12 = approx 58-60% width) */}
         <div className="lg:col-span-7 bg-[#1E293B] rounded-xl border border-slate-700 overflow-hidden shadow-lg relative min-h-[580px] flex flex-col">
-          {/* Map Component Container */}
           <div className="w-full flex-1 relative min-h-[580px]">
             <Map 
               activeLayers={{
@@ -226,11 +238,9 @@ export const ExplorationMap: React.FC = () => {
                 prospectivity: true,
                 faults: activeLayers.lineaments,
                 occurrences: activeLayers.occurrences,
-                uncertainty: false,
-                geochemistry: true,
-                geophysics: false,
               }}
               selectedTarget={selectedTargetId}
+              onMarkerClick={(targetId) => setSelectedTargetId(targetId)}
             />
 
             {/* FLOATING MAP LEGEND (Matching Top Right Legend in Reference Screenshot) */}
@@ -509,21 +519,14 @@ export const ExplorationMap: React.FC = () => {
             {/* Donut Chart SVG Representation matching Screenshot */}
             <div className="relative w-36 h-36 shrink-0 flex items-center justify-center">
               <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                {/* Background Track */}
                 <path className="text-slate-800" strokeWidth="4" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                {/* Very High 12% */}
                 <path className="text-red-600" strokeWidth="4" strokeDasharray="12, 100" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                {/* High 24% */}
                 <path className="text-amber-500" strokeWidth="4" strokeDasharray="24, 100" strokeDashoffset="-12" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                {/* Medium 36% */}
                 <path className="text-yellow-400" strokeWidth="4" strokeDasharray="36, 100" strokeDashoffset="-36" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                {/* Low 20% */}
                 <path className="text-emerald-500" strokeWidth="4" strokeDasharray="20, 100" strokeDashoffset="-72" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                {/* Very Low 8% */}
                 <path className="text-blue-600" strokeWidth="4" strokeDasharray="8, 100" strokeDashoffset="-92" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
               </svg>
 
-              {/* Center Donut Label */}
               <div className="absolute flex flex-col items-center justify-center text-center">
                 <span className="text-[10px] text-slate-400 font-semibold leading-none">Total AOI</span>
                 <span className="text-sm font-extrabold text-white font-mono mt-0.5">1,247 km²</span>
@@ -577,22 +580,17 @@ export const ExplorationMap: React.FC = () => {
             Manganese Index (Sample Location)
           </h3>
 
-          {/* Spectral Bands Line Chart SVG Representation matching Screenshot */}
           <div className="space-y-2">
             <div className="h-36 bg-[#0F172A] rounded border border-slate-700 p-3 relative flex items-end justify-between">
-              {/* Y-Axis Labels */}
               <div className="absolute left-2 top-2 text-[9px] text-slate-500 font-mono">1.0</div>
               <div className="absolute left-2 top-16 text-[9px] text-slate-500 font-mono">0.5</div>
               <div className="absolute left-2 bottom-2 text-[9px] text-slate-500 font-mono">0.0</div>
 
-              {/* Line Curve SVG */}
               <svg className="w-full h-full overflow-visible" viewBox="0 0 300 100" preserveAspectRatio="none">
-                {/* Horizontal Gridlines */}
                 <line x1="0" y1="20" x2="300" y2="20" stroke="#334155" strokeWidth="1" strokeDasharray="3,3" />
                 <line x1="0" y1="50" x2="300" y2="50" stroke="#334155" strokeWidth="1" strokeDasharray="3,3" />
                 <line x1="0" y1="80" x2="300" y2="80" stroke="#334155" strokeWidth="1" strokeDasharray="3,3" />
 
-                {/* Manganese Spectral Response Curve */}
                 <polyline
                   fill="none"
                   stroke="#3B82F6"
@@ -600,7 +598,6 @@ export const ExplorationMap: React.FC = () => {
                   points="20,62  50,50  80,48  110,28  145,35  180,49  215,42  250,58  280,68"
                 />
 
-                {/* Curve Points */}
                 {[
                   { x: 20, y: 62 },
                   { x: 50, y: 50 },
@@ -617,7 +614,6 @@ export const ExplorationMap: React.FC = () => {
               </svg>
             </div>
 
-            {/* X-Axis Band Labels */}
             <div className="flex justify-between text-[10px] text-slate-400 font-mono px-1">
               <span>B2</span>
               <span>B3</span>
@@ -642,7 +638,6 @@ export const ExplorationMap: React.FC = () => {
             Key Data Layers
           </h3>
 
-          {/* Interactive Checkbox Layer Controls matching Screenshot */}
           <div className="space-y-3 text-xs font-sans">
             <button
               onClick={() => toggleLayer('sentinel2')}

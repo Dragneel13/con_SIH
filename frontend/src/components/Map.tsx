@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { Plus, Minus, Layers as LayersIcon } from 'lucide-react';
 
 interface MapProps {
   initialCenter?: [number, number]; // [lng, lat]
@@ -11,16 +12,24 @@ interface MapProps {
   onMarkerClick?: (targetId: string) => void;
 }
 
+const TARGET_COORDINATES: Record<string, [number, number]> = {
+  'Target-1': [80.72, 21.84],
+  'Target-3': [79.82, 21.91],
+  'Target-2': [79.92, 21.68],
+  'Target-4': [80.31, 21.62],
+  'Target-5': [80.12, 21.78],
+};
+
 export const Map: React.FC<MapProps> = ({
-  initialCenter = [80.18, 21.83], // Balaghat, Madhya Pradesh coordinates
+  initialCenter = [80.18, 21.83], // Balaghat, MP
   initialZoom = 9.8,
   height = '100%',
   activeLayers = {
     sentinel2: true,
+    dem: true,
     geology: true,
-    prospectivity: true,
-    faults: true,
     occurrences: true,
+    lineaments: false,
   },
   selectedTarget = 'Target-1',
   onMarkerClick
@@ -32,22 +41,24 @@ export const Map: React.FC<MapProps> = ({
   useEffect(() => {
     if (map.current || !mapContainer.current) return;
 
-    // OpenStreetMap raster tiles base style
+    // High-Resolution ESRI World Satellite Imagery Style matching Reference Screenshot
     const style: maplibregl.StyleSpecification = {
       version: 8,
       sources: {
-        'osm-tiles': {
+        'esri-satellite': {
           type: 'raster',
-          tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+          tiles: [
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+          ],
           tileSize: 256,
-          attribution: '&copy; OpenStreetMap contributors'
+          attribution: 'Esri, Maxar, Earthstar Geographics'
         }
       },
       layers: [
         {
-          id: 'osm-tiles-layer',
+          id: 'esri-satellite-layer',
           type: 'raster',
-          source: 'osm-tiles',
+          source: 'esri-satellite',
           minzoom: 0,
           maxzoom: 19
         }
@@ -62,96 +73,97 @@ export const Map: React.FC<MapProps> = ({
       attributionControl: false,
     });
 
-    map.current.addControl(new maplibregl.NavigationControl(), 'bottom-right');
-    map.current.addControl(new maplibregl.ScaleControl({ maxWidth: 100, unit: 'metric' }), 'bottom-left');
-
     map.current.on('load', () => {
       if (!map.current) return;
 
-      // 1. Sentinel-2 Optical False-Color Reflectance Layer (Cyan Overlay)
-      map.current.addSource('sentinel2-source', {
+      // 1. AOI Boundary Polygon (White/Dashed Line matching Screenshot)
+      map.current.addSource('aoi-boundary', {
         type: 'geojson',
         data: {
           type: 'FeatureCollection',
           features: [
             {
               type: 'Feature',
-              properties: { name: 'Sentinel-2 NIR Band Index' },
+              properties: { name: 'Balaghat AOI Boundary' },
               geometry: {
                 type: 'Polygon',
                 coordinates: [[
-                  [79.65, 21.60], [80.75, 21.60], [80.75, 22.05], [79.65, 22.05], [79.65, 21.60]
+                  [79.62, 21.60],
+                  [79.75, 21.95],
+                  [80.15, 22.02],
+                  [80.78, 21.92],
+                  [80.75, 21.75],
+                  [80.40, 21.58],
+                  [79.90, 21.58],
+                  [79.62, 21.60]
                 ]]
               }
             }
           ]
         }
       });
+
       map.current.addLayer({
-        id: 'sentinel2-fill',
-        type: 'fill',
-        source: 'sentinel2-source',
+        id: 'aoi-boundary-line',
+        type: 'line',
+        source: 'aoi-boundary',
         paint: {
-          'fill-color': '#0284C7',
-          'fill-opacity': 0.15
+          'line-color': '#FFFFFF',
+          'line-width': 2.5,
+          'line-dasharray': [4, 2]
         }
       });
 
-      // 2. GSI Lithology & Formations Layer (Purple Sausar Belt Overlay)
-      map.current.addSource('geology-source', {
+      // 2. Manganese Belt Line
+      map.current.addSource('mn-belt-line', {
         type: 'geojson',
         data: {
           type: 'FeatureCollection',
           features: [
             {
               type: 'Feature',
-              properties: { formation: 'Mansar Formation (Manganese Ore Horizon)' },
+              properties: { name: 'Manganese Belt Line' },
               geometry: {
-                type: 'Polygon',
-                coordinates: [[
-                  [79.70, 21.68], [80.10, 21.84], [80.72, 21.84], [80.45, 21.92], [79.72, 21.66], [79.70, 21.68]
-                ]]
+                type: 'LineString',
+                coordinates: [[79.65, 21.63], [80.15, 21.83], [80.72, 21.87]]
               }
             }
           ]
         }
       });
       map.current.addLayer({
-        id: 'geology-fill',
-        type: 'fill',
-        source: 'geology-source',
+        id: 'mn-belt-line-layer',
+        type: 'line',
+        source: 'mn-belt-line',
         paint: {
-          'fill-color': '#7C3AED',
-          'fill-opacity': 0.3
+          'line-color': '#F59E0B',
+          'line-width': 2,
+          'line-dasharray': [3, 2]
         }
       });
 
-      // 3. Prospectivity Heatmap Polygon Zones (Gradient Colors matching AI Heatmap in Screenshot)
+      // 3. AI Prospectivity Heatmap Raster Polygons (Smooth Gradient: Red, Orange, Yellow, Green, Blue)
       map.current.addSource('prospectivity-source', {
         type: 'geojson',
         data: {
           type: 'FeatureCollection',
           features: [
-            // Target 1 - Very High Red Zone
+            // Target 1 - Very High Red Core
             {
               type: 'Feature',
               properties: { prospectivity: 0.92, name: 'Target 1 (Very High)' },
               geometry: {
                 type: 'Polygon',
-                coordinates: [[
-                  [80.65, 21.80], [80.78, 21.80], [80.78, 21.88], [80.65, 21.88], [80.65, 21.80]
-                ]]
+                coordinates: [[[80.65, 21.80], [80.78, 21.80], [80.78, 21.88], [80.65, 21.88], [80.65, 21.80]]]
               }
             },
-            // Target 3 - Very High Red Zone
+            // Target 3 - Very High Red Core
             {
               type: 'Feature',
               properties: { prospectivity: 0.87, name: 'Target 3 (Very High)' },
               geometry: {
                 type: 'Polygon',
-                coordinates: [[
-                  [79.76, 21.87], [79.88, 21.87], [79.88, 21.95], [79.76, 21.95], [79.76, 21.87]
-                ]]
+                coordinates: [[[79.76, 21.87], [79.88, 21.87], [79.88, 21.95], [79.76, 21.95], [79.76, 21.87]]]
               }
             },
             // Target 2 - High Orange Zone
@@ -160,9 +172,7 @@ export const Map: React.FC<MapProps> = ({
               properties: { prospectivity: 0.76, name: 'Target 2 (High)' },
               geometry: {
                 type: 'Polygon',
-                coordinates: [[
-                  [79.86, 21.64], [79.98, 21.64], [79.98, 21.72], [79.86, 21.72], [79.86, 21.64]
-                ]]
+                coordinates: [[[79.86, 21.64], [79.98, 21.64], [79.98, 21.72], [79.86, 21.72], [79.86, 21.64]]]
               }
             },
             // Target 4 - Medium Yellow Zone
@@ -171,9 +181,16 @@ export const Map: React.FC<MapProps> = ({
               properties: { prospectivity: 0.69, name: 'Target 4 (Medium)' },
               geometry: {
                 type: 'Polygon',
-                coordinates: [[
-                  [80.25, 21.58], [80.36, 21.58], [80.36, 21.66], [80.25, 21.66], [80.25, 21.58]
-                ]]
+                coordinates: [[[80.25, 21.58], [80.36, 21.58], [80.36, 21.66], [80.25, 21.66], [80.25, 21.58]]]
+              }
+            },
+            // General Ambient Heatmap Shell
+            {
+              type: 'Feature',
+              properties: { prospectivity: 0.45, name: 'Medium Shell' },
+              geometry: {
+                type: 'Polygon',
+                coordinates: [[[79.68, 21.62], [80.70, 21.75], [80.60, 21.95], [79.70, 21.85], [79.68, 21.62]]]
               }
             }
           ]
@@ -189,39 +206,40 @@ export const Map: React.FC<MapProps> = ({
             'interpolate',
             ['linear'],
             ['get', 'prospectivity'],
+            0.1, '#2563EB',
+            0.3, '#10B981',
             0.5, '#EAB308',
             0.75, '#F97316',
             0.9, '#DC2626'
           ],
-          'fill-opacity': 0.6
+          'fill-opacity': 0.65
         }
       });
 
-      // 4. Fault Lineaments
-      map.current.addSource('faults-source', {
+      // 4. GSI Sausar Group Geology Layer
+      map.current.addSource('geology-source', {
         type: 'geojson',
         data: {
           type: 'FeatureCollection',
           features: [
             {
               type: 'Feature',
-              properties: { name: 'Balaghat Thrust Fault F-1' },
+              properties: { formation: 'Mansar Formation' },
               geometry: {
-                type: 'LineString',
-                coordinates: [[79.60, 21.64], [80.15, 21.85], [80.75, 21.90]]
+                type: 'Polygon',
+                coordinates: [[[79.70, 21.68], [80.10, 21.84], [80.72, 21.84], [80.45, 21.92], [79.72, 21.66], [79.70, 21.68]]]
               }
             }
           ]
         }
       });
       map.current.addLayer({
-        id: 'faults-line',
-        type: 'line',
-        source: 'faults-source',
+        id: 'geology-fill',
+        type: 'fill',
+        source: 'geology-source',
         paint: {
-          'line-color': '#F59E0B',
-          'line-width': 2,
-          'line-dasharray': [3, 2]
+          'fill-color': '#7C3AED',
+          'fill-opacity': 0.25
         }
       });
     });
@@ -232,15 +250,30 @@ export const Map: React.FC<MapProps> = ({
     };
   }, [initialCenter, initialZoom]);
 
-  // Dynamically update map layers visibility & markers
+  // Smoothly zoom and center map when selectedTarget prop changes
+  useEffect(() => {
+    if (!map.current) return;
+    const targetCoords = TARGET_COORDINATES[selectedTarget];
+    if (targetCoords) {
+      map.current.flyTo({
+        center: targetCoords,
+        zoom: 11.2,
+        speed: 1.2,
+        curve: 1.4,
+        essential: true,
+      });
+    }
+  }, [selectedTarget]);
+
+  // Toggle active layers
   useEffect(() => {
     if (!map.current || !map.current.isStyleLoaded()) return;
 
     const layerMap: Record<string, string> = {
-      sentinel2: 'sentinel2-fill',
+      sentinel2: 'esri-satellite-layer',
       geology: 'geology-fill',
       prospectivity: 'prospectivity-fill',
-      faults: 'faults-line'
+      lineaments: 'mn-belt-line-layer'
     };
 
     Object.entries(layerMap).forEach(([key, layerId]) => {
@@ -254,38 +287,40 @@ export const Map: React.FC<MapProps> = ({
       }
     });
 
-    // Re-render Map Markers (Target Pins with Priority Labels matching Screenshot)
+    // Re-render Map Markers (Target Pins with Priority Labels matching Reference Screenshot)
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
 
     const targetPins = [
-      { id: 'Target-1', name: 'Target 1', label: 'Very High Priority', coords: [80.72, 21.84], status: 'Very High', color: 'bg-red-600' },
-      { id: 'Target-3', name: 'Target 3', label: 'High Priority', coords: [79.82, 21.91], status: 'Very High', color: 'bg-red-600' },
-      { id: 'Target-2', name: 'Target 2', label: 'High Priority', coords: [79.92, 21.68], status: 'High', color: 'bg-amber-500' },
-      { id: 'Target-4', name: 'Target 4', label: 'Medium Priority', coords: [80.31, 21.62], status: 'Medium', color: 'bg-yellow-500' },
+      { id: 'Target-1', name: 'Target 1', label: 'Very High Priority', coords: [80.72, 21.84], status: 'Very High', color: 'bg-red-600', dotColor: '#DC2626' },
+      { id: 'Target-3', name: 'Target 3', label: 'Very High Priority', coords: [79.82, 21.91], status: 'Very High', color: 'bg-red-600', dotColor: '#DC2626' },
+      { id: 'Target-2', name: 'Target 2', label: 'High Priority', coords: [79.92, 21.68], status: 'High', color: 'bg-amber-500', dotColor: '#F97316' },
+      { id: 'Target-4', name: 'Target 4', label: 'Medium Priority', coords: [80.31, 21.62], status: 'Medium', color: 'bg-amber-400', dotColor: '#EAB308' },
     ];
 
     targetPins.forEach((pin) => {
-      const isSelected = selectedTarget === pin.id || (selectedTarget === 'Target-1' && pin.id === 'Target-1');
+      const isSelected = selectedTarget === pin.id;
       const container = document.createElement('div');
-      container.className = 'flex flex-col items-center cursor-pointer group z-20';
+      container.className = 'flex flex-col items-center cursor-pointer group z-30';
 
-      // Pin Bubble Label (Matching Screenshot Pin Label style)
+      // Pin Bubble Label (Matching Screenshot Label style)
       const labelDiv = document.createElement('div');
-      labelDiv.className = `px-2 py-1 rounded shadow-lg text-[10px] font-extrabold whitespace-nowrap mb-1 transition-transform ${
-        isSelected ? 'bg-white text-slate-900 ring-2 ring-amber-400 scale-110' : 'bg-[#0F172A]/90 text-white border border-slate-700'
+      labelDiv.className = `px-2.5 py-1 rounded-md shadow-2xl text-[10px] font-extrabold flex items-center gap-1.5 transition-all ${
+        isSelected
+          ? 'bg-slate-900 text-white ring-2 ring-amber-400 scale-110 shadow-amber-500/50'
+          : 'bg-[#0F172A]/90 text-white border border-slate-700 hover:scale-105'
       }`;
       labelDiv.innerHTML = `
-        <div class="flex items-center gap-1">
-          <span class="w-2 h-2 rounded-full ${pin.color}"></span>
-          <span>${pin.name}</span>
-          <span class="text-[9px] opacity-75 font-normal">(${pin.label})</span>
-        </div>
+        <span class="w-2 h-2 rounded-full ${pin.color}"></span>
+        <span class="font-bold">${pin.name}</span>
+        <span class="text-[9px] text-slate-300 font-normal">${pin.label}</span>
       `;
 
-      // Marker Dot
+      // Marker Dot Pin
       const dotDiv = document.createElement('div');
-      dotDiv.className = `w-4 h-4 rounded-full ${pin.color} border-2 border-white shadow-xl ${isSelected ? 'ring-4 ring-amber-400 scale-125' : ''}`;
+      dotDiv.className = `w-4 h-4 rounded-full ${pin.color} border-2 border-white shadow-xl mt-1 ${
+        isSelected ? 'ring-4 ring-amber-400 scale-125' : ''
+      }`;
 
       container.appendChild(labelDiv);
       container.appendChild(dotDiv);
@@ -296,13 +331,6 @@ export const Map: React.FC<MapProps> = ({
 
       const m = new maplibregl.Marker({ element: container })
         .setLngLat(pin.coords as [number, number])
-        .setPopup(new maplibregl.Popup({ offset: 12 }).setHTML(`
-          <div class="text-slate-900 p-2 text-xs font-sans">
-            <strong class="text-[#003366]">${pin.name} (${pin.label})</strong><br/>
-            Location: <span class="font-mono">${pin.coords[1]}° N, ${pin.coords[0]}° E</span><br/>
-            Status: <span class="font-bold text-emerald-700">${pin.status}</span>
-          </div>
-        `))
         .addTo(map.current!);
 
       markersRef.current.push(m);
@@ -317,7 +345,7 @@ export const Map: React.FC<MapProps> = ({
 
     placeNames.forEach((place) => {
       const el = document.createElement('div');
-      el.className = 'text-white text-xs font-bold font-sans tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] flex items-center gap-1';
+      el.className = 'text-white text-xs font-bold font-sans tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] flex items-center gap-1 z-10';
       el.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-white"></span><span>${place.name}</span>`;
 
       const m = new maplibregl.Marker({ element: el })
@@ -329,9 +357,67 @@ export const Map: React.FC<MapProps> = ({
 
   }, [activeLayers, selectedTarget, onMarkerClick]);
 
+  const handleZoomIn = () => {
+    if (map.current) map.current.zoomIn();
+  };
+
+  const handleZoomOut = () => {
+    if (map.current) map.current.zoomOut();
+  };
+
+  const handleResetZoom = () => {
+    if (map.current) {
+      map.current.flyTo({ center: initialCenter, zoom: initialZoom });
+    }
+  };
+
   return (
     <div className="relative w-full h-full rounded-xl border border-slate-700 overflow-hidden shadow-inner min-h-[580px]" style={{ height }}>
       <div ref={mapContainer} className="w-full h-full min-h-[580px] bg-[#0F172A]" />
+
+      {/* ZOOM & LAYER CONTROLS (Matching Screenshot Bottom Right Controls) */}
+      <div className="absolute bottom-6 right-6 flex flex-col items-center gap-1.5 z-20">
+        <button
+          onClick={handleZoomIn}
+          className="w-8 h-8 bg-[#0F172A]/90 hover:bg-slate-800 text-white rounded-lg border border-slate-700 shadow-xl flex items-center justify-center transition active:scale-95"
+          title="Zoom In (+)"
+        >
+          <Plus className="w-4 h-4 text-slate-200" />
+        </button>
+
+        <button
+          onClick={handleZoomOut}
+          className="w-8 h-8 bg-[#0F172A]/90 hover:bg-slate-800 text-white rounded-lg border border-slate-700 shadow-xl flex items-center justify-center transition active:scale-95"
+          title="Zoom Out (-)"
+        >
+          <Minus className="w-4 h-4 text-slate-200" />
+        </button>
+
+        <button
+          onClick={handleResetZoom}
+          className="w-8 h-8 bg-[#0F172A]/90 hover:bg-slate-800 text-white rounded-lg border border-slate-700 shadow-xl flex items-center justify-center transition active:scale-95 mt-1"
+          title="Reset Extent & Layers"
+        >
+          <LayersIcon className="w-4 h-4 text-blue-400" />
+        </button>
+      </div>
+
+      {/* SCALE BAR (Matching Screenshot Bottom Left Scale) */}
+      <div className="absolute bottom-6 left-6 bg-[#0F172A]/90 px-3 py-1.5 rounded-md border border-slate-700 text-[10px] text-slate-300 font-mono flex items-center gap-3 z-20 shadow-lg">
+        <div className="flex items-center gap-1">
+          <span className="w-2 h-2 rounded-full bg-blue-400" />
+          <span className="font-bold text-white">Scale:</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span>0</span>
+          <span className="w-8 border-b-2 border-white inline-block"></span>
+          <span>5</span>
+          <span className="w-8 border-b-2 border-white inline-block"></span>
+          <span>10</span>
+          <span className="w-12 border-b-2 border-white inline-block"></span>
+          <span>20 km</span>
+        </div>
+      </div>
     </div>
   );
 };
