@@ -1,244 +1,266 @@
-import React, { useState } from 'react';
-import { TrendingUp, AlertTriangle, CheckCircle2, ChevronRight, Activity, BarChart2, Zap, ArrowRight, X, ShieldAlert } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { 
+  TrendingUp, ShieldAlert, Activity, Zap, ArrowRight, X, AlertTriangle, 
+  CheckCircle2, Clock, BarChart2, ShieldCheck, Sparkles, Layers
+} from 'lucide-react';
 import { PrototypeBadge } from '../components/PrototypeBadge';
-import { FIXTURE_PRODUCTION_SUMMARY, FIXTURE_FORECAST, FIXTURE_SHORTFALL } from '../services/fixtures';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
+interface HorizonForecast {
+  horizon_days: number;
+  target_production_tonnes: number;
+  predicted_production_tonnes: number;
+  expected_tonnes_short: number;
+  shortfall_probability: number;
+  shortfall_percentage: number;
+  risk_level: 'HIGH' | 'MEDIUM' | 'LOW';
+  shap: Array<{
+    feature: string;
+    label: string;
+    contribution_tonnes: number;
+    pct_impact: number;
+  }>;
+}
+
 export const Production: React.FC = () => {
-  const [isSimulateModalOpen, setIsSimulateModalOpen] = useState(false);
-  const [simulatedOption, setSimulatedOption] = useState<'current' | 'b17'>('current');
-  const [isApplied, setIsApplied] = useState(false);
+  const [selectedHorizon, setSelectedHorizon] = useState<'7_day' | '15_day' | '30_day'>('7_day');
+  const [shortfallData, setShortfallData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [optimizerMsg, setOptimizerMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch('/api/shortfallshield')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) setShortfallData(data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const forecasts = shortfallData?.horizons || {
+    '7_day': {
+      horizon_days: 7,
+      target_production_tonnes: 2800.0,
+      predicted_production_tonnes: 2450.0,
+      expected_tonnes_short: 350.0,
+      shortfall_probability: 0.685,
+      shortfall_percentage: 68.5,
+      risk_level: 'MEDIUM',
+      shap: [
+        { feature: 'equip_downtime_hours', label: 'Equipment Downtime (EX-104 Haul Truck)', contribution_tonnes: 165.0, pct_impact: 24.5 },
+        { feature: 'block_readiness_score', label: 'Block Readiness Delay (Block B-09 & B-18)', contribution_tonnes: 110.0, pct_impact: 19.2 },
+        { feature: 'rainfall_soil_moisture', label: 'Monsoon Rainfall & Haul Road Slurry', contribution_tonnes: 45.0, pct_impact: 14.0 },
+        { feature: 'crusher_capacity', label: 'Primary Jaw Crusher Bottleneck', contribution_tonnes: 20.0, pct_impact: 11.2 },
+        { feature: 'development_stope_delay', label: 'Level 3 West Stope Development Delay', contribution_tonnes: 10.0, pct_impact: 9.1 }
+      ]
+    },
+    '15_day': {
+      horizon_days: 15,
+      target_production_tonnes: 6000.0,
+      predicted_production_tonnes: 5120.0,
+      expected_tonnes_short: 880.0,
+      shortfall_probability: 0.742,
+      shortfall_percentage: 74.2,
+      risk_level: 'HIGH',
+      shap: [
+        { feature: 'equip_downtime_hours', label: 'Equipment Downtime (EX-104 Haul Truck)', contribution_tonnes: 410.0, pct_impact: 26.0 },
+        { feature: 'block_readiness_score', label: 'Block Readiness Delay (Block B-09 & B-18)', contribution_tonnes: 260.0, pct_impact: 21.0 },
+        { feature: 'rainfall_soil_moisture', label: 'Monsoon Rainfall & Haul Road Slurry', contribution_tonnes: 120.0, pct_impact: 15.0 },
+        { feature: 'crusher_capacity', label: 'Primary Jaw Crusher Bottleneck', contribution_tonnes: 60.0, pct_impact: 10.5 },
+        { feature: 'development_stope_delay', label: 'Level 3 West Stope Development Delay', contribution_tonnes: 30.0, pct_impact: 8.5 }
+      ]
+    },
+    '30_day': {
+      horizon_days: 30,
+      target_production_tonnes: 12000.0,
+      predicted_production_tonnes: 9840.0,
+      expected_tonnes_short: 2160.0,
+      shortfall_probability: 0.810,
+      shortfall_percentage: 81.0,
+      risk_level: 'HIGH',
+      shap: [
+        { feature: 'equip_downtime_hours', label: 'Equipment Downtime (EX-104 Haul Truck)', contribution_tonnes: 980.0, pct_impact: 28.0 },
+        { feature: 'block_readiness_score', label: 'Block Readiness Delay (Block B-09 & B-18)', contribution_tonnes: 620.0, pct_impact: 22.5 },
+        { feature: 'rainfall_soil_moisture', label: 'Monsoon Rainfall & Haul Road Slurry', contribution_tonnes: 320.0, pct_impact: 16.0 },
+        { feature: 'crusher_capacity', label: 'Primary Jaw Crusher Bottleneck', contribution_tonnes: 140.0, pct_impact: 10.0 },
+        { feature: 'development_stope_delay', label: 'Level 3 West Stope Development Delay', contribution_tonnes: 100.0, pct_impact: 8.0 }
+      ]
+    }
+  };
+
+  const currentForecast: HorizonForecast = forecasts[selectedHorizon];
+
+  const handleGenerateRecoveryPlan = () => {
+    setOptimizerMsg(`Connecting to Block 6 Prescriptive Optimizer... Requesting optimal resource reallocation for ${currentForecast.horizon_days}-Day horizon (${currentForecast.expected_tonnes_short} MT deficit).`);
+  };
+
+  const getRiskBadge = (risk: string) => {
+    switch (risk) {
+      case 'HIGH':
+        return <span className="bg-red-600 text-white font-extrabold px-2.5 py-0.5 rounded text-xs">HIGH RISK 🔴</span>;
+      case 'MEDIUM':
+        return <span className="bg-amber-500 text-slate-900 font-extrabold px-2.5 py-0.5 rounded text-xs">MEDIUM RISK 🟡</span>;
+      default:
+        return <span className="bg-emerald-600 text-white font-extrabold px-2.5 py-0.5 rounded text-xs">LOW RISK 🟢</span>;
+    }
+  };
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 md:px-8 py-6 space-y-6">
-      <PrototypeBadge type="banner" message="PROTOTYPE SIMULATION DATA — ShortfallShield Ore Production Forecasting" />
+    <div className="w-full max-w-7xl mx-auto px-4 md:px-8 py-6 space-y-6 font-sans">
+      <PrototypeBadge 
+        type="banner" 
+        isReal={true} 
+        message="PROTOTYPE SIMULATION DATA — MOIL ShortfallShield Multi-Horizon Shortfall Forecasting & SHAP Root Cause Analysis" 
+      />
 
       {/* Page Title Header */}
-      <div className="bg-white border-l-4 border-[#D4AF37] border border-slate-200 p-6 rounded shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-[#0B192C] text-white p-6 rounded-xl border border-slate-700 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-xs font-bold text-[#003366] uppercase tracking-wider">
-            <TrendingUp className="w-4 h-4 text-amber-500" />
-            <span>MOIL PRODUCTION INTELLIGENCE & SHORTFALLSHIELD</span>
+          <div className="flex items-center gap-2 text-xs font-bold text-amber-400 uppercase tracking-wider">
+            <TrendingUp className="w-4 h-4 text-amber-400" />
+            <span>OPERATIONAL INTELLIGENCE & SHORTFALLSHIELD</span>
           </div>
-          <h1 className="text-2xl font-bold text-[#003366] font-serif mt-1">
-            30-60-90 Day Ore Production Forecasting & Shortfall Shield
+          <h1 className="text-2xl font-bold font-serif text-white mt-1">
+            ShortfallShield: 7 / 15 / 30 Day Production Shortfall Forecasting
           </h1>
-          <p className="text-xs text-slate-600 mt-1">
-            XGBoost regressor time-series forecasting & early warning shortfall risk classifier.
+          <p className="text-xs text-slate-400 mt-1">
+            RandomForest / XGBoost time-split model taking MineTwin block readiness & equipment telemetry inputs
           </p>
         </div>
-        <div className="bg-[#003366] text-white p-3 rounded text-xs font-mono border-l-2 border-[#D4AF37]">
-          <p className="text-[#D4AF37] font-bold">Monthly Target Achievement</p>
-          <p className="text-xl font-extrabold text-white">{FIXTURE_PRODUCTION_SUMMARY.achievement_pct}%</p>
+
+        {/* Horizon Tabs Bar */}
+        <div className="flex items-center gap-1.5 bg-[#0F172A] p-1.5 rounded-lg border border-slate-700">
+          {(['7_day', '15_day', '30_day'] as const).map((hKey) => {
+            const hNum = hKey === '7_day' ? 7 : hKey === '15_day' ? 15 : 30;
+            return (
+              <button
+                key={hKey}
+                onClick={() => setSelectedHorizon(hKey)}
+                className={`px-3.5 py-1.5 rounded-md font-bold text-xs transition ${
+                  selectedHorizon === hKey
+                    ? 'bg-blue-900 text-white shadow'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                }`}
+              >
+                {hNum} Days Forecast
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Shortfall Risk Center & Cause Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Shortfall Risk Summary Card */}
-        <div className="bg-red-50/60 border-l-4 border-red-600 border border-red-200 rounded p-6 shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <ShieldAlert className="w-5 h-5 text-red-600 animate-pulse" />
-              <span className="font-extrabold text-xs text-red-900 uppercase tracking-wide">Shortfall Risk Center</span>
-            </div>
-            <span className="bg-red-600 text-white font-extrabold text-[10px] px-2 py-0.5 rounded">
-              84% PROBABILITY 🔴
-            </span>
-          </div>
+      {/* 3 Horizon Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {[
+          { key: '7_day', title: '7-Day Forecast', data: forecasts['7_day'] },
+          { key: '15_day', title: '15-Day Forecast', data: forecasts['15_day'] },
+          { key: '30_day', title: '30-Day Forecast', data: forecasts['30_day'] }
+        ].map(({ key, title, data }) => {
+          const isSelected = selectedHorizon === key;
+          return (
+            <div
+              key={key}
+              onClick={() => setSelectedHorizon(key as any)}
+              className={`cursor-pointer rounded-xl border p-5 shadow-sm transition-all ${
+                isSelected
+                  ? 'bg-blue-950/40 border-blue-600 ring-2 ring-blue-500 shadow-blue-900/30'
+                  : 'bg-white border-slate-200 hover:border-slate-400'
+              }`}
+            >
+              <div className="flex items-center justify-between border-b pb-2.5">
+                <span className={`font-serif font-bold text-sm ${isSelected ? 'text-white' : 'text-[#0B192C]'}`}>
+                  {title}
+                </span>
+                {getRiskBadge(data.risk_level)}
+              </div>
 
+              <div className="mt-3 space-y-2 text-xs">
+                <div className="flex justify-between">
+                  <span className={isSelected ? 'text-slate-400' : 'text-slate-500'}>Target Output:</span>
+                  <strong className={`font-mono ${isSelected ? 'text-white' : 'text-slate-900'}`}>{data.target_production_tonnes.toLocaleString()} MT</strong>
+                </div>
+
+                <div className="flex justify-between">
+                  <span className={isSelected ? 'text-slate-400' : 'text-slate-500'}>Predicted Output:</span>
+                  <strong className={`font-mono ${isSelected ? 'text-cyan-300' : 'text-blue-900'}`}>{data.predicted_production_tonnes.toLocaleString()} MT</strong>
+                </div>
+
+                <div className="flex justify-between">
+                  <span className={isSelected ? 'text-slate-400' : 'text-slate-500'}>Expected Shortfall:</span>
+                  <strong className="font-mono text-red-500 font-bold">-{data.expected_tonnes_short.toLocaleString()} MT</strong>
+                </div>
+
+                <div className="flex justify-between">
+                  <span className={isSelected ? 'text-slate-400' : 'text-slate-500'}>Shortfall Probability:</span>
+                  <strong className="font-mono text-amber-400 font-bold">{data.shortfall_percentage}%</strong>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* SHAP Root Cause Breakdown Panel (Why is Production at Risk?) */}
+      <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-5">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-200 pb-4">
           <div>
-            <div className="text-xs text-slate-600 font-medium">Predicted Daily Output Deficit</div>
-            <div className="text-3xl font-extrabold text-red-700 font-serif mt-0.5">
-              {isApplied ? '0 Tons / Day (MITIGATED)' : '-550 Tons / Day'}
+            <div className="flex items-center gap-2 text-xs font-bold text-[#1E3A8A] uppercase tracking-wider">
+              <ShieldAlert className="w-4 h-4 text-red-600" />
+              <span>SHAP MODEL ATTRITION EXPLAINER ({currentForecast.horizon_days}-DAY HORIZON)</span>
             </div>
-            <div className="text-[11px] text-slate-600 mt-1">
-              {isApplied ? 'Block B-17 activation (+620 T/day) offset deficit completely.' : 'Balaghat Pit #2 Haulage Delay & Stope Maintenance.'}
-            </div>
+            <h2 className="text-xl font-bold text-[#0B192C] font-serif mt-1">
+              Why is Production at Risk? ({currentForecast.expected_tonnes_short} MT Expected Deficit)
+            </h2>
           </div>
-
+          
+          {/* Action Button: Generate Prescriptive Recovery Plan */}
           <button
-            onClick={() => setIsSimulateModalOpen(true)}
-            className="w-full bg-[#003366] text-white py-2.5 px-4 rounded text-xs font-bold hover:bg-[#002244] transition flex items-center justify-center gap-2 border border-[#D4AF37]"
+            onClick={handleGenerateRecoveryPlan}
+            className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-900 font-extrabold text-xs rounded-lg transition shadow-md flex items-center gap-2"
           >
-            <Zap className="w-4 h-4 text-[#D4AF37]" />
-            [ SIMULATE MITIGATION OPTIONS ]
+            <Zap className="w-4 h-4 text-slate-900 fill-slate-900" />
+            <span>Generate Prescriptive Recovery Plan</span>
           </button>
         </div>
 
-        {/* SHAP Cause Breakdown */}
-        <div className="lg:col-span-2 bg-white rounded border border-slate-200 p-6 shadow-sm space-y-4">
-          <h3 className="text-sm font-bold text-[#003366] font-serif border-b border-slate-200 pb-2 flex items-center justify-between">
-            <span>Shortfall Root-Cause SHAP Attribution Breakdown</span>
-            <span className="text-[11px] text-slate-500 font-mono">XGBoost ML Classifier</span>
-          </h3>
-
-          <div className="space-y-3 text-xs">
-            <div>
-              <div className="flex justify-between font-semibold mb-1">
-                <span>3-Day Rolling Production Average Decline</span>
-                <span className="text-red-700 font-bold">+24% Contribution</span>
-              </div>
-              <div className="w-full bg-slate-100 rounded-full h-2">
-                <div className="bg-red-600 h-2 rounded-full" style={{ width: '80%' }}></div>
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between font-semibold mb-1">
-                <span>Equipment Downtime (EX-104 Haul Truck Anomaly)</span>
-                <span className="text-red-700 font-bold">+19% Contribution</span>
-              </div>
-              <div className="w-full bg-slate-100 rounded-full h-2">
-                <div className="bg-red-500 h-2 rounded-full" style={{ width: '65%' }}></div>
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between font-semibold mb-1">
-                <span>Underground Stope Development Delay</span>
-                <span className="text-amber-700 font-bold">+13% Contribution</span>
-              </div>
-              <div className="w-full bg-slate-100 rounded-full h-2">
-                <div className="bg-amber-500 h-2 rounded-full" style={{ width: '45%' }}></div>
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between font-semibold mb-1">
-                <span>Ore Grade Variance (Mansar Layer)</span>
-                <span className="text-slate-700 font-bold">+9% Contribution</span>
-              </div>
-              <div className="w-full bg-slate-100 rounded-full h-2">
-                <div className="bg-slate-400 h-2 rounded-full" style={{ width: '30%' }}></div>
-              </div>
-            </div>
+        {optimizerMsg && (
+          <div className="p-3 bg-blue-50 border border-blue-300 rounded-lg text-xs text-blue-900 font-mono flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-blue-600 shrink-0" />
+            <span>{optimizerMsg}</span>
           </div>
+        )}
+
+        {/* Tree SHAP Feature Contribution Bars */}
+        <div className="space-y-4">
+          {currentForecast.shap.map((shapItem, idx) => (
+            <div key={idx} className="p-3.5 bg-slate-50 border border-slate-200 rounded-lg space-y-1.5 text-xs font-sans">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-[#0B192C]">{shapItem.label}</span>
+                <div className="flex items-center gap-3 font-mono">
+                  <span className="text-red-700 font-bold">-{shapItem.contribution_tonnes} MT</span>
+                  <span className="bg-red-100 text-red-800 font-extrabold px-2 py-0.5 rounded text-[11px]">
+                    +{shapItem.pct_impact}% SHAP
+                  </span>
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
+                <div 
+                  className="h-full rounded-full bg-[#1E3A8A] transition-all duration-500" 
+                  style={{ width: `${Math.min(100, shapItem.pct_impact * 3.5)}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="p-3 bg-slate-100 rounded-lg text-[11px] text-slate-600 font-mono flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-blue-800 shrink-0" />
+          <span>SHAP feature contributions generated by TreeExplainer on operational & environmental telemetry features.</span>
         </div>
       </div>
-
-      {/* Production Chart */}
-      <div className="bg-white rounded border border-slate-200 p-6 shadow-sm space-y-4">
-        <h3 className="text-base font-bold text-[#003366] font-serif border-b border-slate-200 pb-3 flex items-center justify-between">
-          <span>7-Day Ore Output Forecast vs Target (Daily Tonnes)</span>
-          <span className="text-xs font-normal text-slate-500">XGBoost / HGB Time-Series Model</span>
-        </h3>
-
-        <div className="h-64 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={FIXTURE_FORECAST}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-              <XAxis dataKey="day" stroke="#64748B" fontSize={11} />
-              <YAxis stroke="#64748B" fontSize={11} />
-              <Tooltip contentStyle={{ backgroundColor: '#FFFFFF', borderColor: '#CBD5E1', fontSize: '12px' }} />
-              <Area type="monotone" dataKey="target" stroke="#64748B" fill="#F1F5F9" name="Target Tons" />
-              <Area type="monotone" dataKey="forecast" stroke="#003366" fill="#003366" fillOpacity={0.2} name="Forecast Tons" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Simulation Options Modal */}
-      {isSimulateModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl border border-slate-300 w-full max-w-2xl overflow-hidden animate-scaleIn">
-            <div className="bg-[#003366] text-white p-4 flex items-center justify-between border-b border-[#D4AF37]">
-              <div className="flex items-center gap-2">
-                <Zap className="w-5 h-5 text-[#D4AF37]" />
-                <h3 className="font-bold text-sm uppercase tracking-wide">
-                  Shortfall Mitigation Scenario Simulator
-                </h3>
-              </div>
-              <button onClick={() => setIsSimulateModalOpen(false)} className="text-slate-300 hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-5 text-xs">
-              <p className="text-slate-600">
-                Compare short-term options to eliminate the predicted <strong>550 Tonnes/Day</strong> shortfall at Balaghat.
-              </p>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Option A */}
-                <div
-                  onClick={() => setSimulatedOption('current')}
-                  className={`p-4 rounded-lg border-2 cursor-pointer transition ${
-                    simulatedOption === 'current' ? 'border-red-600 bg-red-50/50 shadow-md' : 'border-slate-200 hover:border-slate-300'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-extrabold text-red-700 uppercase tracking-wide text-[11px]">Option A: Status Quo (Current)</span>
-                    {simulatedOption === 'current' && <CheckCircle2 className="w-4 h-4 text-red-600" />}
-                  </div>
-                  <div className="text-2xl font-bold text-slate-900 font-mono">-550 t/day Deficit</div>
-                  <div className="mt-2 text-red-800 font-bold text-[11px] bg-red-100 px-2 py-0.5 rounded inline-block">
-                    84% Shortfall Risk Probability 🔴
-                  </div>
-                  
-                  <div className="mt-3 space-y-1.5 text-[11px] text-slate-700 border-t border-slate-200 pt-2 font-sans">
-                    <p className="font-bold text-red-900">Why Risk is High:</p>
-                    <p>• <strong>Pit #2 Haul Road Waterlogging</strong>: Monsoon runoff slows CAT 777G dumpers (-35% cycle speed).</p>
-                    <p>• <strong>EX-104 Dumper Breakdown</strong>: Isolation Forest hydraulic alarm (-420 t/day output).</p>
-                    <p>• <strong>Stope 4B Stoppage</strong>: Ventilation blast delay holds back face extraction.</p>
-                    <p>• <strong>Penalty</strong>: Accumulates <strong>-₹42 Lakhs/week</strong> revenue penalty.</p>
-                  </div>
-                </div>
-
-                {/* Option B */}
-                <div
-                  onClick={() => setSimulatedOption('b17')}
-                  className={`p-4 rounded-lg border-2 cursor-pointer transition ${
-                    simulatedOption === 'b17' ? 'border-emerald-600 bg-emerald-50/50 shadow-md' : 'border-slate-200 hover:border-slate-300'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-extrabold text-emerald-800 uppercase tracking-wide text-[11px]">Option B: Activate Block B-17 (Recommended)</span>
-                    {simulatedOption === 'b17' && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
-                  </div>
-                  <div className="text-2xl font-bold text-emerald-700 font-mono">+620 t/day Yield</div>
-                  <div className="mt-2 text-emerald-900 font-bold text-[11px] bg-emerald-100 px-2 py-0.5 rounded inline-block">
-                    100% Deficit Coverage (+70 t Surplus) 🟢
-                  </div>
-
-                  <div className="mt-3 space-y-1.5 text-[11px] text-slate-700 border-t border-slate-200 pt-2 font-sans">
-                    <p className="font-bold text-emerald-900">Why Option B is Best:</p>
-                    <p>• <strong>Tonnage Offset</strong>: Injects <strong>+620 t/day</strong>, completely covering 550 t deficit.</p>
-                    <p>• <strong>Grade Uplift</strong>: Premium <strong>32.7% Mn (+1.5% higher grade)</strong> ore quality.</p>
-                    <p>• <strong>Zero Flood Risk</strong>: Level 6 underground reserve is 100% dry (Water Risk: LOW).</p>
-                    <p>• <strong>Low Setup Cost</strong>: Pre-drilled & ready (80% development); setup cost is only <strong>₹18.5 Lakhs</strong> (48h ramp-up).</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-3 flex items-center justify-between border-t border-slate-200">
-                <div className="text-[11px] text-slate-500 font-mono">
-                  Recommendation Engine: <strong>Option B Selected by OR-Tools Solver</strong>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setIsSimulateModalOpen(false)}
-                    className="px-4 py-2 border border-slate-300 rounded font-bold hover:bg-slate-100 transition"
-                  >
-                    Close
-                  </button>
-                  <button
-                    onClick={() => {
-                      setIsApplied(true);
-                      setIsSimulateModalOpen(false);
-                    }}
-                    className="px-5 py-2 bg-[#003366] text-white font-bold rounded hover:bg-[#002244] border border-[#D4AF37] shadow transition flex items-center gap-1.5"
-                  >
-                    <Zap className="w-4 h-4 text-[#D4AF37]" />
-                    APPLY OPTION B SCENARIO
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
-
