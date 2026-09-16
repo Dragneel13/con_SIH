@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
 from app.ml.whatif_simulator import WhatIfSimulator
+from app.services.audit_service import log_audit_event
 
 router = APIRouter(prefix="/api/whatif", tags=["What-If Simulator"])
 simulator = WhatIfSimulator()
@@ -36,8 +37,25 @@ def simulate_scenario(request: WhatIfRequest):
     try:
         req_dict = request.dict()
         result = simulator.simulate(req_dict)
+        
+        log_audit_event(
+            username="system_user",
+            role="Operations Manager",
+            action="WHATIF_SIMULATION",
+            resource="/api/whatif/simulate",
+            status="SUCCESS",
+            details=f"Simulated scenario '{result.get('scenario_title')}' (Loss: -{result.get('scenario', {}).get('production_loss_delta_tonnes')} MT)."
+        )
         return result
     except Exception as e:
+        log_audit_event(
+            username="system_user",
+            role="Operations Manager",
+            action="WHATIF_SIMULATION",
+            resource="/api/whatif/simulate",
+            status="FAILED",
+            details=f"Simulation failed: {str(e)}"
+        )
         raise HTTPException(status_code=500, detail=f"What-If Simulation Error: {str(e)}")
 
 @router.get("/baseline")

@@ -5,8 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 
-from backend.app.ml.optimizer import PrescriptiveMineOptimizer
-from app.api.production import get_minetwin_state, get_shortfallshield_forecasts
+from app.ml.optimizer import PrescriptiveMineOptimizer
+from app.api.production import get_minetwin_state
+from app.services.audit_service import log_audit_event
 
 router = APIRouter()
 
@@ -42,5 +43,14 @@ def run_optimization(req: OptimizeRequest):
     # 3. Instantiate and run Prescriptive Mine Optimizer engine
     engine = PrescriptiveMineOptimizer(crusher_capacity_daily=req.custom_crusher_capacity or 1200.0)
     result = engine.optimize(mine_state=mine_state, shortfall_info=shortfall_info)
+
+    log_audit_event(
+        username="system_user",
+        role="Operations Manager",
+        action="OPTIMIZER_EXECUTION",
+        resource="/api/optimizer/optimize",
+        status=result.get("status", "OPTIMIZED"),
+        details=f"Evaluated Prescriptive Recovery Plans for shortfall -{req.expected_tonnes_short} MT over {req.horizon_days}d."
+    )
 
     return result
