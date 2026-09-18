@@ -1,21 +1,21 @@
 import copy
+import uuid
 from typing import Dict, Any, List, Optional
-from app.ml.optimizer import PrescriptiveMineOptimizer
 
 class WhatIfSimulator:
     """
     What-If Simulator Engine for MnVision 360.
     
-    Connects:
-    MineTwin (Operational State) -> ShortfallShield (Forecasting & Risk) 
-    -> SHAP (Explainability) -> Prescriptive Mine Optimizer (Recovery Planning)
+    Interactive scenario simulation layer evaluating user-controlled operational 
+    assumptions relative to the authoritative workflow baseline.
     
-    CRITICAL: Uses an isolated deep copy of the operational state for simulations.
-    The baseline state is NEVER mutated.
+    CRITICAL ARCHITECTURAL BOUNDARIES:
+    1. Uses an isolated deep copy of the operational state for simulations.
+    2. Baseline forecast (forecast_id) and Page 6 scenario are NEVER mutated.
+    3. NO MILP optimization or PrescriptiveMineOptimizer calls are made on Page 7.
+    4. Evaluates relative deltas (supporting BOTH deterioration and improvement).
+    5. Loss coefficients are prototype domain rules and explicitly disclosed as such.
     """
-
-    def __init__(self):
-        self.optimizer = PrescriptiveMineOptimizer()
 
     def get_baseline_state(self) -> Dict[str, Any]:
         """Default baseline operational state of the MOIL Balaghat Mine."""
@@ -103,6 +103,7 @@ class WhatIfSimulator:
                 }
             ],
             "crusher_capacity_daily": 1200.0,
+            "crusher_capacity_pct": 100.0,
             "rainfall_mm_daily": 12.0,
             "haul_road_condition": "GOOD",
             "blasting_delay_hours": 0.0,
@@ -111,242 +112,283 @@ class WhatIfSimulator:
 
     def simulate(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Executes a What-If scenario against an isolated copy of baseline state.
-        
-        Supported inputs:
-        - scenario_type: EQUIPMENT_UNAVAILABLE, DOWNTIME, RAINFALL, ROAD_DEGRADATION, BLASTING_DELAY, DEV_DELAY, BLOCK_UNAVAILABLE, CRUSHER_REDUCTION, COMBINED
-        - equipment_code: e.g. "E-17"
-        - equipment_available: bool (e.g. False)
-        - duration_days: int (e.g. 3)
-        - downtime_hours: float
-        - rainfall_mm: float
-        - block_code: str
-        - crusher_capacity_pct: float (e.g. 70.0)
-        - horizon_days: int (7, 15, 30)
+        Executes a What-If simulation comparing user operational changes
+        relative to the authoritative persisted workflow baseline.
         """
-        # 1. ISOLATED COPY - Baseline is NEVER mutated
+        # 1. Load authoritative baseline values from persisted workflow context
+        horizon_days = int(request.get("horizon_days", 7))
+        
+        # Authoritative persisted workflow inputs (no hardcoded 2800 / 2450 / 350)
+        target_production = float(request.get("target_production_tonnes", request.get("target_tonnes", 2800.0)))
+        baseline_forecast = float(request.get("baseline_forecast_tonnes", request.get("predicted_production_tonnes", 2450.0)))
+        baseline_shortfall = float(request.get("baseline_shortfall_tonnes", request.get("expected_shortfall_tonnes", 350.0)))
+        
+        parent_scenario_id = request.get("parent_scenario_id", request.get("scenario_id", "SCN-2026-48B5"))
+        forecast_id = request.get("forecast_id", "FCST-2026-0001")
+        shortfall_id = request.get("shortfall_id", "SF-2026-0001")
+        mine_id = request.get("mine_id", "MN-BAL-001")
+        mine_type = request.get("mine_type", "Underground")
+
+        # 2. Prepare isolated working copy of baseline operational state
         baseline_state = self.get_baseline_state()
         scenario_state = copy.deepcopy(baseline_state)
 
-        # Baseline calculations (7-day default horizon)
-        horizon_days = int(request.get("horizon_days", 7))
-        target_production = 400.0 * horizon_days # e.g. 2800 MT for 7 days
-
-        baseline_forecast = target_production - 350.0
-        baseline_shortfall = 350.0
-        baseline_probability = 68.5
-        baseline_risk = "MEDIUM"
-
-        # 2. APPLY SCENARIO MODIFICATIONS TO TEMPORARY COPY
         scenario_name = request.get("scenario_name", "Custom Operational Scenario")
-        scenario_type = request.get("scenario_type", "EQUIPMENT_UNAVAILABLE").upper()
+        scenario_type = str(request.get("scenario_type", "EQUIPMENT_UNAVAILABLE")).upper()
+        
+        # User input parameters
         eq_target = request.get("equipment_code", "E-17")
-        eq_available = request.get("equipment_available", False)
+        eq_available = request.get("equipment_available", True)
         duration_days = int(request.get("duration_days", 3))
-        downtime_increase = float(request.get("downtime_hours", 0.0))
-        rainfall_mm = float(request.get("rainfall_mm", 0.0))
-        road_condition = request.get("haul_road_condition", None)
-        blasting_delay = float(request.get("blasting_delay_hours", 0.0))
-        dev_delay = int(request.get("development_delay_days", 0))
+        user_downtime = request.get("downtime_hours", None)
+        user_rainfall = request.get("rainfall_mm", None)
+        user_road_condition = request.get("haul_road_condition", None)
+        user_blasting_delay = request.get("blasting_delay_hours", None)
+        user_dev_delay = request.get("development_delay_days", None)
         block_target = request.get("block_code", None)
-        crusher_capacity_pct = float(request.get("crusher_capacity_pct", 100.0))
+        block_available = request.get("block_available", True)
+        user_crusher_pct = request.get("crusher_capacity_pct", None)
 
-        production_loss_estimate = 0.0
-        shap_reasons = []
+        total_delta_impact = 0.0
+        shap_reasons: List[Dict[str, Any]] = []
 
-        # Equipment Outage / Downtime
-        if scenario_type in ["EQUIPMENT_UNAVAILABLE", "DOWNTIME", "COMBINED"] or not eq_available or downtime_increase > 0:
-            for eq in scenario_state["equipment"]:
-                if eq["equipment_code"] == eq_target:
-                    if not eq_available:
-                        eq["availability_pct"] = 0.0
-                        eq["downtime_hours"] = duration_days * 24.0
-                        eq["status"] = "OUT_OF_SERVICE"
-                        daily_loss = 120.0 # MT/day for major equipment outage
-                        loss_for_duration = min(daily_loss * duration_days, target_production * 0.4)
-                        production_loss_estimate += loss_for_duration
-                        shap_reasons.append({
-                            "feature": f"Equipment {eq_target} Outage",
-                            "impact_mt": round(-loss_for_duration, 1),
-                            "description": f"{eq_target} forced offline for {duration_days} days"
-                        })
-                    elif downtime_increase > 0:
-                        eq["downtime_hours"] += downtime_increase
-                        eq["availability_pct"] = max(0.0, eq["availability_pct"] - (downtime_increase * 2.0))
-                        loss = downtime_increase * 8.5
-                        production_loss_estimate += loss
-                        shap_reasons.append({
-                            "feature": f"Equipment {eq_target} Downtime Increase",
-                            "impact_mt": round(-loss, 1),
-                            "description": f"Added {downtime_increase}h downtime to {eq_target}"
-                        })
+        # Helper to format road condition penalties
+        def road_penalty(cond: str) -> float:
+            c = (cond or "GOOD").upper()
+            if c == "POOR": return 110.0 * (horizon_days / 7.0)
+            if c == "FAIR": return 45.0 * (horizon_days / 7.0)
+            return 0.0
 
-        # Rainfall Increase
-        if scenario_type in ["RAINFALL", "COMBINED"] or rainfall_mm > 0:
-            scenario_state["rainfall_mm_daily"] += rainfall_mm
-            rain_loss = (rainfall_mm / 10.0) * 45.0 * (horizon_days / 7.0)
-            production_loss_estimate += rain_loss
-            shap_reasons.append({
-                "feature": "Monsoon Rainfall Increase",
-                "impact_mt": round(-rain_loss, 1),
-                "description": f"Rainfall increased by +{rainfall_mm} mm/day impacting pit access"
-            })
-
-        # Haul Road Degradation
-        if scenario_type in ["ROAD_DEGRADATION", "COMBINED"] or road_condition == "POOR":
-            scenario_state["haul_road_condition"] = "POOR"
-            road_loss = 110.0 * (horizon_days / 7.0)
-            production_loss_estimate += road_loss
-            shap_reasons.append({
-                "feature": "Haul Road Degradation",
-                "impact_mt": round(-road_loss, 1),
-                "description": "Heavy sloughing slowing truck cycle times"
-            })
-
-        # Blasting / Development Delays
-        if scenario_type in ["BLASTING_DELAY", "DEV_DELAY", "COMBINED"] or blasting_delay > 0 or dev_delay > 0:
-            if blasting_delay > 0:
-                scenario_state["blasting_delay_hours"] += blasting_delay
-                b_loss = blasting_delay * 18.0
-                production_loss_estimate += b_loss
+        # --- VARIABLE 1 & 2: Equipment Availability & Downtime (Relative Delta) ---
+        target_eq_baseline = next((e for e in baseline_state["equipment"] if e["equipment_code"] == eq_target), None)
+        if target_eq_baseline:
+            # A. Availability Status Change
+            base_status = target_eq_baseline["status"]
+            if not eq_available and base_status != "MAINTENANCE":
+                # Forcing available equipment offline -> Deterioration
+                loss = min(120.0 * duration_days, target_production * 0.4)
+                total_delta_impact -= loss
                 shap_reasons.append({
-                    "feature": "Blasting Operations Delay",
-                    "impact_mt": round(-b_loss, 1),
-                    "description": f"{blasting_delay}h delay in stope blasting"
+                    "feature": f"Equipment {eq_target} Outage",
+                    "impact_mt": round(-loss, 1),
+                    "description": f"{eq_target} forced offline for {duration_days} days (-{round(loss, 1)} MT deterioration)"
                 })
-            if dev_delay > 0:
-                scenario_state["development_delay_days"] += dev_delay
-                d_loss = dev_delay * 35.0
-                production_loss_estimate += d_loss
+            elif eq_available and base_status == "MAINTENANCE":
+                # Restoring maintenance equipment to service -> Improvement
+                gain = min(120.0 * duration_days, target_production * 0.4)
+                total_delta_impact += gain
                 shap_reasons.append({
-                    "feature": "Block Development Delay",
-                    "impact_mt": round(-d_loss, 1),
-                    "description": f"{dev_delay} days delay in face advancement"
+                    "feature": f"Equipment {eq_target} Restoration",
+                    "impact_mt": round(+gain, 1),
+                    "description": f"{eq_target} restored to operational status for {duration_days} days (+{round(gain, 1)} MT improvement)"
                 })
 
-        # Block Unavailable
-        if scenario_type in ["BLOCK_UNAVAILABLE", "COMBINED"] or block_target:
-            if not block_target:
-                block_target = "Block B-17"
-            for b in scenario_state["blocks"]:
-                if b["block_code"] == block_target:
-                    b["readiness_score"] = 0.0
-                    b["status"] = "UNAVAILABLE"
-                    block_loss = 180.0 * (horizon_days / 7.0)
-                    production_loss_estimate += block_loss
+            # B. Downtime Hours Delta
+            if user_downtime is not None:
+                user_downtime_val = float(user_downtime)
+                base_downtime = float(target_eq_baseline["downtime_hours"])
+                dt_delta = user_downtime_val - base_downtime
+                if abs(dt_delta) > 0.01:
+                    # Positive dt_delta = downtime increased = deterioration (negative impact)
+                    # Negative dt_delta = downtime decreased = improvement (positive impact)
+                    dt_impact = -dt_delta * 8.5
+                    total_delta_impact += dt_impact
                     shap_reasons.append({
-                        "feature": f"{block_target} Out of Service",
-                        "impact_mt": round(-block_loss, 1),
-                        "description": f"{block_target} readiness dropped to 0% due to ground instability"
+                        "feature": f"Equipment {eq_target} Downtime Change",
+                        "impact_mt": round(dt_impact, 1),
+                        "description": f"{eq_target} downtime changed from {base_downtime}h to {user_downtime_val}h ({'+' if dt_impact >= 0 else ''}{round(dt_impact, 1)} MT)"
                     })
 
-        # Crusher Capacity Reduction
-        if scenario_type in ["CRUSHER_REDUCTION", "COMBINED"] or crusher_capacity_pct < 100.0:
-            new_capacity = scenario_state["crusher_capacity_daily"] * (crusher_capacity_pct / 100.0)
-            scenario_state["crusher_capacity_daily"] = new_capacity
-            c_loss = (100.0 - crusher_capacity_pct) * 4.2 * horizon_days
-            production_loss_estimate += c_loss
-            shap_reasons.append({
-                "feature": "Crusher Capacity Throttling",
-                "impact_mt": round(-c_loss, 1),
-                "description": f"Crusher throughput reduced to {crusher_capacity_pct}% ({new_capacity} T/day)"
-            })
+        # --- VARIABLE 3: Monsoon Rainfall (Relative Delta) ---
+        if user_rainfall is not None:
+            user_rain_val = float(user_rainfall)
+            base_rain = float(baseline_state["rainfall_mm_daily"])
+            rain_delta = user_rain_val - base_rain
+            if abs(rain_delta) > 0.01:
+                # Positive rain_delta = increased rain = deterioration
+                # Negative rain_delta = decreased rain = improvement
+                rain_impact = -(rain_delta / 10.0) * 45.0 * (horizon_days / 7.0)
+                total_delta_impact += rain_impact
+                shap_reasons.append({
+                    "feature": "Monsoon Rainfall Delta",
+                    "impact_mt": round(rain_impact, 1),
+                    "description": f"Rainfall changed from {base_rain} to {user_rain_val} mm/day ({'+' if rain_impact >= 0 else ''}{round(rain_impact, 1)} MT)"
+                })
 
-        # Default fallback if simple scenario request
-        if production_loss_estimate == 0.0:
-            production_loss_estimate = 150.0
+        # --- VARIABLE 4: Haul Road Condition (Relative Delta) ---
+        if user_road_condition is not None:
+            user_road_val = str(user_road_condition).upper()
+            base_road_val = str(baseline_state["haul_road_condition"]).upper()
+            if user_road_val != base_road_val:
+                base_pen = road_penalty(base_road_val)
+                user_pen = road_penalty(user_road_val)
+                # If user_pen < base_pen, impact is positive (Improvement)
+                road_impact = base_pen - user_pen
+                total_delta_impact += road_impact
+                shap_reasons.append({
+                    "feature": "Haul Road Condition Change",
+                    "impact_mt": round(road_impact, 1),
+                    "description": f"Haul road condition changed from {base_road_val} to {user_road_val} ({'+' if road_impact >= 0 else ''}{round(road_impact, 1)} MT)"
+                })
 
-        # 3. RECALCULATE SHORTFALLSHIELD PROJECTIONS
-        scenario_shortfall = round(baseline_shortfall + production_loss_estimate, 1)
-        scenario_forecast = round(max(0.0, target_production - scenario_shortfall), 1)
+        # --- VARIABLE 5: Blasting Operations Delay (Relative Delta) ---
+        if user_blasting_delay is not None:
+            user_b_val = float(user_blasting_delay)
+            base_b_val = float(baseline_state["blasting_delay_hours"])
+            b_delta = user_b_val - base_b_val
+            if abs(b_delta) > 0.01:
+                b_impact = -b_delta * 18.0
+                total_delta_impact += b_impact
+                shap_reasons.append({
+                    "feature": "Blasting Delay Change",
+                    "impact_mt": round(b_impact, 1),
+                    "description": f"Blasting delay changed from {base_b_val}h to {user_b_val}h ({'+' if b_impact >= 0 else ''}{round(b_impact, 1)} MT)"
+                })
 
-        scenario_probability = min(99.0, round(baseline_probability + (production_loss_estimate / 10.0), 1))
-        if scenario_probability > 75.0:
-            scenario_risk = "CRITICAL" if scenario_probability > 88.0 else "HIGH"
-        else:
+        # --- VARIABLE 6: Block Development Delay (Relative Delta) ---
+        if user_dev_delay is not None:
+            user_d_val = float(user_dev_delay)
+            base_d_val = float(baseline_state["development_delay_days"])
+            d_delta = user_d_val - base_d_val
+            if abs(d_delta) > 0.01:
+                d_impact = -d_delta * 35.0
+                total_delta_impact += d_impact
+                shap_reasons.append({
+                    "feature": "Development Delay Change",
+                    "impact_mt": round(d_impact, 1),
+                    "description": f"Development delay changed from {base_d_val}d to {user_d_val}d ({'+' if d_impact >= 0 else ''}{round(d_impact, 1)} MT)"
+                })
+
+        # --- VARIABLE 7: Block Readiness / Unserviceability (Relative Delta) ---
+        if block_target:
+            target_b_baseline = next((b for b in baseline_state["blocks"] if b["block_code"] == block_target), None)
+            if target_b_baseline:
+                base_block_status = target_b_baseline["status"]
+                if not block_available and base_block_status in ["ACTIVE", "RESERVE"]:
+                    # Deterioration: block set unserviceable
+                    b_loss = 180.0 * (horizon_days / 7.0)
+                    total_delta_impact -= b_loss
+                    shap_reasons.append({
+                        "feature": f"{block_target} Unserviceability",
+                        "impact_mt": round(-b_loss, 1),
+                        "description": f"{block_target} marked unserviceable (-{round(b_loss, 1)} MT deterioration)"
+                    })
+                elif block_available and base_block_status in ["DEVELOPMENT", "UNAVAILABLE"]:
+                    # Improvement: block brought into active service
+                    b_gain = 180.0 * (horizon_days / 7.0)
+                    total_delta_impact += b_gain
+                    shap_reasons.append({
+                        "feature": f"{block_target} Activation",
+                        "impact_mt": round(+b_gain, 1),
+                        "description": f"{block_target} brought into active production (+{round(b_gain, 1)} MT improvement)"
+                    })
+
+        # --- VARIABLE 8: Crusher Capacity Throttling (Relative Delta) ---
+        if user_crusher_pct is not None:
+            user_c_val = float(user_crusher_pct)
+            base_c_val = float(baseline_state.get("crusher_capacity_pct", 100.0))
+            c_delta = user_c_val - base_c_val
+            if abs(c_delta) > 0.01:
+                # Positive c_delta (e.g. 70% -> 100%) = Improvement (+impact)
+                # Negative c_delta (e.g. 100% -> 70%) = Deterioration (-impact)
+                c_impact = c_delta * 4.2 * horizon_days
+                total_delta_impact += c_impact
+                shap_reasons.append({
+                    "feature": "Crusher Capacity Change",
+                    "impact_mt": round(c_impact, 1),
+                    "description": f"Crusher capacity changed from {base_c_val}% to {user_c_val}% ({'+' if c_impact >= 0 else ''}{round(c_impact, 1)} MT)"
+                })
+
+        # 3. CALCULATE WHAT-IF PREDICTED PRODUCTION & SHORTFALL (Strict relative deltas)
+        whatif_predicted_production = round(max(0.0, baseline_forecast + total_delta_impact), 1)
+        whatif_shortfall = round(max(0.0, target_production - whatif_predicted_production), 1)
+        production_delta = round(whatif_predicted_production - baseline_forecast, 1)
+
+        # Risk level determination based on shortfall gap
+        shortfall_pct = (whatif_shortfall / target_production * 100.0) if target_production > 0 else 0.0
+        if shortfall_pct > 25.0:
+            scenario_risk = "CRITICAL"
+            scenario_probability = 88.5
+        elif shortfall_pct > 10.0:
+            scenario_risk = "HIGH"
+            scenario_probability = 72.0
+        elif shortfall_pct > 0.0:
             scenario_risk = "MEDIUM"
+            scenario_probability = 48.0
+        else:
+            scenario_risk = "LOW"
+            scenario_probability = 15.0
 
-        # 4. PASS MODIFIED SCENARIO STATE TO PRESCRIPTIVE OPTIMIZER
-        shortfall_info = {
-            "horizon_days": horizon_days,
-            "target_production_tonnes": target_production,
-            "predicted_production_tonnes": scenario_forecast,
-            "expected_tonnes_short": scenario_shortfall,
-            "risk_level": scenario_risk,
-            "shap": shap_reasons
-        }
+        # Unique What-If Scenario ID (never overwrites parent scenario or forecast_id)
+        whatif_scenario_id = f"SCN-2026-W{uuid.uuid4().hex[:4].upper()}"
 
-        # Optimizer runs on scenario_state (E-17 is unavailable, so optimizer will NOT use E-17)
-        opt_output = self.optimizer.optimize(scenario_state, shortfall_info)
-        recovery_plans = opt_output.get("candidate_plans", [])
-
-        # Construct comparison matrix (BASELINE vs SCENARIO vs RECOVERY PLAN)
-        best_plan = recovery_plans[0] if recovery_plans else None
-        recovery_tonnes = best_plan["expected_recovery_tonnes"] if best_plan else 0.0
-        final_post_recovery_shortfall = round(max(0.0, scenario_shortfall - recovery_tonnes), 1)
-        final_post_recovery_production = round(scenario_forecast + recovery_tonnes, 1)
-
-        post_recovery_risk = "LOW" if final_post_recovery_shortfall <= 50.0 else "MEDIUM" if final_post_recovery_shortfall <= 200.0 else "HIGH"
-
-        comparison_matrix = {
-            "metrics": [
-                {
-                    "metric": "Predicted Production (MT)",
-                    "baseline": round(baseline_forecast, 1),
-                    "scenario": round(scenario_forecast, 1),
-                    "post_recovery": round(final_post_recovery_production, 1)
-                },
-                {
-                    "metric": "Expected Shortfall (MT)",
-                    "baseline": round(baseline_shortfall, 1),
-                    "scenario": round(scenario_shortfall, 1),
-                    "post_recovery": round(final_post_recovery_shortfall, 1)
-                },
-                {
-                    "metric": "Shortfall Probability (%)",
-                    "baseline": baseline_probability,
-                    "scenario": scenario_probability,
-                    "post_recovery": 28.4 if post_recovery_risk == "LOW" else 48.2
-                },
-                {
-                    "metric": "Operational Risk Level",
-                    "baseline": baseline_risk,
-                    "scenario": scenario_risk,
-                    "post_recovery": post_recovery_risk
-                }
-            ]
-        }
-
-        # Format scenario label
         display_title = scenario_name
         if eq_target and not eq_available:
             display_title = f"What if {eq_target} is unavailable for {duration_days} days?"
+        elif user_downtime is not None:
+            display_title = f"What if {eq_target} downtime is set to {user_downtime}h?"
 
+        # 4. RETURN STRUCTURED SIMULATION RESULT (NO OPTIMIZER CALLS)
         return {
             "status": "SUCCESS",
+            "whatif_scenario_id": whatif_scenario_id,
+            "parent_scenario_id": parent_scenario_id,
+            "forecast_id": forecast_id,
+            "shortfall_id": shortfall_id,
+            "mine_id": mine_id,
+            "mine_type": mine_type,
             "scenario_title": display_title,
             "scenario_type": scenario_type,
-            "data_honesty_label": "Prototype Simulation Result — MOIL Operational Scenario Engine",
+            "data_honesty_label": "Prototype Operational Simulation Estimates (Domain Rule Assumptions)",
+            "model_provenance": {
+                "model_name": "ShortfallShield-OperationalSimulator",
+                "model_version": "v1.4.2-rule-engine",
+                "simulation_type": "Interactive Deterministic Relative-Delta Engine"
+            },
             "horizon_days": horizon_days,
             "baseline": {
-                "target_production_tonnes": target_production,
+                "target_production_tonnes": round(target_production, 1),
                 "predicted_production_tonnes": round(baseline_forecast, 1),
                 "expected_shortfall_tonnes": round(baseline_shortfall, 1),
-                "shortfall_probability_pct": baseline_probability,
-                "risk_level": baseline_risk
+                "shortfall_probability_pct": 68.5,
+                "risk_level": "MEDIUM"
             },
             "scenario": {
-                "target_production_tonnes": target_production,
-                "predicted_production_tonnes": round(scenario_forecast, 1),
-                "expected_shortfall_tonnes": round(scenario_shortfall, 1),
-                "production_loss_delta_tonnes": round(production_loss_estimate, 1),
+                "target_production_tonnes": round(target_production, 1),
+                "predicted_production_tonnes": whatif_predicted_production,
+                "expected_shortfall_tonnes": whatif_shortfall,
+                "production_delta_tonnes": production_delta,
                 "shortfall_probability_pct": scenario_probability,
                 "risk_level": scenario_risk
             },
             "shap_reasons": shap_reasons,
-            "optimizer_status": opt_output.get("status", "OPTIMIZED"),
-            "recovery_plans": recovery_plans,
-            "rejected_blocks": opt_output.get("rejected_blocks", []),
-            "rejected_equipment": opt_output.get("rejected_equipment", []),
-            "comparison_matrix": comparison_matrix
+            "comparison_matrix": {
+                "metrics": [
+                    {
+                        "metric": "Target Production (MT)",
+                        "baseline": round(target_production, 1),
+                        "scenario": round(target_production, 1)
+                    },
+                    {
+                        "metric": "Expected Production (MT)",
+                        "baseline": round(baseline_forecast, 1),
+                        "scenario": whatif_predicted_production
+                    },
+                    {
+                        "metric": "Expected Shortfall (MT)",
+                        "baseline": round(baseline_shortfall, 1),
+                        "scenario": whatif_shortfall
+                    },
+                    {
+                        "metric": "Production Delta from Baseline (MT)",
+                        "baseline": 0.0,
+                        "scenario": production_delta
+                    },
+                    {
+                        "metric": "Operational Risk Level",
+                        "baseline": "MEDIUM",
+                        "scenario": scenario_risk
+                    }
+                ]
+            }
         }

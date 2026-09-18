@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Lock, User, ShieldCheck, ArrowRight, KeyRound, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -37,6 +37,18 @@ export const Login: React.FC = () => {
   
   const { login: authContextLogin, getDefaultDashboard } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const getRedirectDestination = (userRole?: string) => {
+    const fromState = (location.state as any)?.from;
+    if (fromState) {
+      if (typeof fromState === 'string') return fromState;
+      if (fromState.pathname) {
+        return `${fromState.pathname}${fromState.search || ''}${fromState.hash || ''}`;
+      }
+    }
+    return getDefaultDashboard(userRole);
+  };
 
   const handleSelectPreset = (presetUsername: string) => {
     const preseeded = PRESEEDED_ACCOUNTS[presetUsername];
@@ -69,8 +81,8 @@ export const Login: React.FC = () => {
           full_name: tokenData.user.full_name,
           email: tokenData.user.email,
         });
-        const targetDashboard = getDefaultDashboard(tokenData.user.role);
-        navigate(targetDashboard);
+        const targetDestination = getRedirectDestination(tokenData.user.role);
+        navigate(targetDestination, { replace: true });
         return;
       }
 
@@ -86,8 +98,8 @@ export const Login: React.FC = () => {
           full_name: preseeded.fullName,
           email: `${userToAuth}@moil.nic.in`,
         });
-        const targetDashboard = getDefaultDashboard(preseeded.role);
-        navigate(targetDashboard);
+        const targetDestination = getRedirectDestination(preseeded.role);
+        navigate(targetDestination, { replace: true });
         return;
       }
 
@@ -102,8 +114,8 @@ export const Login: React.FC = () => {
           full_name: preseeded.fullName,
           email: `${userToAuth}@moil.nic.in`,
         });
-        const targetDashboard = getDefaultDashboard(preseeded.role);
-        navigate(targetDashboard);
+        const targetDestination = getRedirectDestination(preseeded.role);
+        navigate(targetDestination, { replace: true });
         return;
       }
 

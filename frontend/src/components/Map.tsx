@@ -9,7 +9,10 @@ interface MapProps {
   height?: string;
   activeLayers?: Record<string, boolean>;
   selectedTarget?: string;
+  selectedLocationPin?: { lat: number; lng: number } | null;
   onMarkerClick?: (targetId: string) => void;
+  onMapClick?: (lat: number, lng: number, prospectivity: number) => void;
+  onHover?: (lat: number, lng: number, prospectivity: number) => void;
 }
 
 const TARGET_COORDINATES: Record<string, [number, number]> = {
@@ -19,6 +22,25 @@ const TARGET_COORDINATES: Record<string, [number, number]> = {
   'Target-4': [80.31, 21.62],
   'Target-5': [80.12, 21.78],
 };
+
+export function calculateProspectivity(lat: number, lng: number): number {
+  const centers = [
+    { lat: 21.84, lng: 80.72, score: 0.92 },
+    { lat: 21.91, lng: 79.82, score: 0.87 },
+    { lat: 21.68, lng: 79.92, score: 0.76 },
+    { lat: 21.62, lng: 80.31, score: 0.69 },
+    { lat: 21.78, lng: 80.12, score: 0.58 },
+  ];
+  let maxScore = 0.22;
+  for (const c of centers) {
+    const dist = Math.sqrt(Math.pow(lat - c.lat, 2) + Math.pow(lng - c.lng, 2));
+    if (dist < 0.20) {
+      const contrib = c.score * Math.max(0, 1 - dist / 0.20);
+      if (contrib > maxScore) maxScore = contrib;
+    }
+  }
+  return Number(Math.min(0.96, Math.max(0.12, maxScore)).toFixed(2));
+}
 
 export const Map: React.FC<MapProps> = ({
   initialCenter = [80.18, 21.83], // Balaghat, MP
@@ -31,18 +53,30 @@ export const Map: React.FC<MapProps> = ({
     occurrences: true,
     lineaments: false,
     cem: true,
+    prospectivity: true,
   },
   selectedTarget = 'Target-1',
-  onMarkerClick
+  selectedLocationPin = null,
+  onMarkerClick,
+  onMapClick,
+  onHover,
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<maplibregl.Marker[]>([]);
 
+  const onHoverRef = useRef(onHover);
+  const onMapClickRef = useRef(onMapClick);
+
+  useEffect(() => {
+    onHoverRef.current = onHover;
+    onMapClickRef.current = onMapClick;
+  }, [onHover, onMapClick]);
+
   useEffect(() => {
     if (map.current || !mapContainer.current) return;
 
-    // High-Resolution ESRI World Satellite Imagery Style matching Reference Screenshot
+    // High-Resolution ESRI World Satellite Imagery Style
     const style: maplibregl.StyleSpecification = {
       version: 8,
       sources: {
@@ -77,7 +111,7 @@ export const Map: React.FC<MapProps> = ({
     map.current.on('load', () => {
       if (!map.current) return;
 
-      // 1. AOI Boundary Polygon (White/Dashed Line matching Screenshot)
+      // 1. AOI Boundary Polygon (White/Dashed Line)
       map.current.addSource('aoi-boundary', {
         type: 'geojson',
         data: {
@@ -143,7 +177,7 @@ export const Map: React.FC<MapProps> = ({
         }
       });
 
-      // 3. CEM Spectral Anomaly Layer (Cyan Cyan/Magenta FIR Filter Anomaly)
+      // 3. CEM Spectral Anomaly Layer
       map.current.addSource('cem-source', {
         type: 'geojson',
         data: {
@@ -178,13 +212,12 @@ export const Map: React.FC<MapProps> = ({
         }
       });
 
-      // 4. AI Prospectivity Heatmap Raster Polygons (Smooth Gradient: Red, Orange, Yellow, Green, Blue)
+      // 4. AI Prospectivity Heatmap Raster Polygons
       map.current.addSource('prospectivity-source', {
         type: 'geojson',
         data: {
           type: 'FeatureCollection',
           features: [
-            // Target 1 - Very High Red Core
             {
               type: 'Feature',
               properties: { prospectivity: 0.92, name: 'Target 1 (Very High)' },
@@ -193,7 +226,6 @@ export const Map: React.FC<MapProps> = ({
                 coordinates: [[[80.65, 21.80], [80.78, 21.80], [80.78, 21.88], [80.65, 21.88], [80.65, 21.80]]]
               }
             },
-            // Target 3 - Very High Red Core
             {
               type: 'Feature',
               properties: { prospectivity: 0.87, name: 'Target 3 (Very High)' },
@@ -202,7 +234,6 @@ export const Map: React.FC<MapProps> = ({
                 coordinates: [[[79.76, 21.87], [79.88, 21.87], [79.88, 21.95], [79.76, 21.95], [79.76, 21.87]]]
               }
             },
-            // Target 2 - High Orange Zone
             {
               type: 'Feature',
               properties: { prospectivity: 0.76, name: 'Target 2 (High)' },
@@ -211,7 +242,6 @@ export const Map: React.FC<MapProps> = ({
                 coordinates: [[[79.86, 21.64], [79.98, 21.64], [79.98, 21.72], [79.86, 21.72], [79.86, 21.64]]]
               }
             },
-            // Target 4 - Medium Yellow Zone
             {
               type: 'Feature',
               properties: { prospectivity: 0.69, name: 'Target 4 (Medium)' },
@@ -220,7 +250,6 @@ export const Map: React.FC<MapProps> = ({
                 coordinates: [[[80.25, 21.58], [80.36, 21.58], [80.36, 21.66], [80.25, 21.66], [80.25, 21.58]]]
               }
             },
-            // General Ambient Heatmap Shell
             {
               type: 'Feature',
               properties: { prospectivity: 0.45, name: 'Medium Shell' },
@@ -278,6 +307,26 @@ export const Map: React.FC<MapProps> = ({
           'fill-opacity': 0.25
         }
       });
+
+      // Mousemove hover event listener
+      map.current.on('mousemove', (e) => {
+        const lng = e.lngLat.lng;
+        const lat = e.lngLat.lat;
+        const score = calculateProspectivity(lat, lng);
+        if (onHoverRef.current) {
+          onHoverRef.current(lat, lng, score);
+        }
+      });
+
+      // Click event listener
+      map.current.on('click', (e) => {
+        const lng = e.lngLat.lng;
+        const lat = e.lngLat.lat;
+        const score = calculateProspectivity(lat, lng);
+        if (onMapClickRef.current) {
+          onMapClickRef.current(lat, lng, score);
+        }
+      });
     });
 
     return () => {
@@ -286,7 +335,7 @@ export const Map: React.FC<MapProps> = ({
     };
   }, [initialCenter, initialZoom]);
 
-  // Smoothly zoom and center map when selectedTarget prop changes
+  // Fly to target when selectedTarget prop changes
   useEffect(() => {
     if (!map.current) return;
     const targetCoords = TARGET_COORDINATES[selectedTarget];
@@ -301,7 +350,7 @@ export const Map: React.FC<MapProps> = ({
     }
   }, [selectedTarget]);
 
-  // Toggle active layers
+  // Toggle active layers and render markers
   useEffect(() => {
     if (!map.current || !map.current.isStyleLoaded()) return;
 
@@ -324,32 +373,33 @@ export const Map: React.FC<MapProps> = ({
       }
     });
 
-    // Re-render Map Markers
+    // Clear existing markers
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
 
+    // Predefined Target Markers
     const targetPins = [
-      { id: 'Target-1', name: 'Target 1', label: 'Very High Priority', coords: [80.72, 21.84], status: 'Very High', color: 'bg-red-600', dotColor: '#DC2626' },
-      { id: 'Target-3', name: 'Target 3', label: 'Very High Priority', coords: [79.82, 21.91], status: 'Very High', color: 'bg-red-600', dotColor: '#DC2626' },
-      { id: 'Target-2', name: 'Target 2', label: 'High Priority', coords: [79.92, 21.68], status: 'High', color: 'bg-amber-500', dotColor: '#F97316' },
-      { id: 'Target-4', name: 'Target 4', label: 'Medium Priority', coords: [80.31, 21.62], status: 'Medium', color: 'bg-amber-400', dotColor: '#EAB308' },
+      { id: 'Target-1', name: 'MN-TGT-001', label: 'High Priority', coords: [80.72, 21.84], color: 'bg-red-600' },
+      { id: 'Target-3', name: 'MN-TGT-003', label: 'High Priority', coords: [79.82, 21.91], color: 'bg-red-600' },
+      { id: 'Target-2', name: 'MN-TGT-002', label: 'High Priority', coords: [79.92, 21.68], color: 'bg-amber-500' },
+      { id: 'Target-4', name: 'MN-TGT-004', label: 'Moderate Priority', coords: [80.31, 21.62], color: 'bg-amber-400' },
+      { id: 'Target-5', name: 'MN-TGT-005', label: 'Low Priority', coords: [80.12, 21.78], color: 'bg-emerald-600' },
     ];
 
     targetPins.forEach((pin) => {
-      const isSelected = selectedTarget === pin.id;
+      const isSelected = selectedTarget === pin.id || selectedTarget === pin.name;
       const container = document.createElement('div');
       container.className = 'flex flex-col items-center cursor-pointer group z-30';
 
       const labelDiv = document.createElement('div');
       labelDiv.className = `px-2.5 py-1 rounded-md shadow-2xl text-[10px] font-extrabold flex items-center gap-1.5 transition-all ${
         isSelected
-          ? 'bg-slate-900 text-white ring-2 ring-amber-400 scale-110 shadow-amber-500/50'
+          ? 'bg-[#1B2170] text-white ring-2 ring-amber-400 scale-110 shadow-amber-500/50'
           : 'bg-[#0F172A]/90 text-white border border-slate-700 hover:scale-105'
       }`;
       labelDiv.innerHTML = `
         <span class="w-2 h-2 rounded-full ${pin.color}"></span>
         <span class="font-bold">${pin.name}</span>
-        <span class="text-[9px] text-slate-300 font-normal">${pin.label}</span>
       `;
 
       const dotDiv = document.createElement('div');
@@ -360,7 +410,8 @@ export const Map: React.FC<MapProps> = ({
       container.appendChild(labelDiv);
       container.appendChild(dotDiv);
 
-      container.onclick = () => {
+      container.onclick = (e) => {
+        e.stopPropagation();
         if (onMarkerClick) onMarkerClick(pin.id);
       };
 
@@ -371,6 +422,24 @@ export const Map: React.FC<MapProps> = ({
       markersRef.current.push(m);
     });
 
+    // Custom Selected Location Marker (User clicked arbitrary coordinate or entered Lat/Lng)
+    if (selectedLocationPin) {
+      const pinContainer = document.createElement('div');
+      pinContainer.className = 'flex flex-col items-center cursor-pointer z-40 animate-bounce';
+      pinContainer.innerHTML = `
+        <div class="bg-amber-400 text-slate-950 font-mono font-black px-2 py-0.5 rounded text-[10px] shadow-lg border border-amber-300">
+          📍 LOC (${selectedLocationPin.lat.toFixed(4)}, ${selectedLocationPin.lng.toFixed(4)})
+        </div>
+        <div class="w-5 h-5 rounded-full bg-amber-400 border-2 border-slate-950 shadow-2xl mt-0.5"></div>
+      `;
+      const locMarker = new maplibregl.Marker({ element: pinContainer })
+        .setLngLat([selectedLocationPin.lng, selectedLocationPin.lat])
+        .addTo(map.current!);
+
+      markersRef.current.push(locMarker);
+    }
+
+    // Place Labels
     const placeNames = [
       { name: 'Balaghat', coords: [80.18, 21.82] },
       { name: 'Tirodi', coords: [79.71, 21.68] },
@@ -379,7 +448,7 @@ export const Map: React.FC<MapProps> = ({
 
     placeNames.forEach((place) => {
       const el = document.createElement('div');
-      el.className = 'text-white text-xs font-bold font-sans tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] flex items-center gap-1 z-10';
+      el.className = 'text-white text-xs font-bold font-sans tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] flex items-center gap-1 z-10 pointer-events-none';
       el.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-white"></span><span>${place.name}</span>`;
 
       const m = new maplibregl.Marker({ element: el })
@@ -389,21 +458,11 @@ export const Map: React.FC<MapProps> = ({
       markersRef.current.push(m);
     });
 
-  }, [activeLayers, selectedTarget, onMarkerClick]);
+  }, [activeLayers, selectedTarget, selectedLocationPin, onMarkerClick]);
 
-  const handleZoomIn = () => {
-    if (map.current) map.current.zoomIn();
-  };
-
-  const handleZoomOut = () => {
-    if (map.current) map.current.zoomOut();
-  };
-
-  const handleResetZoom = () => {
-    if (map.current) {
-      map.current.flyTo({ center: initialCenter, zoom: initialZoom });
-    }
-  };
+  const handleZoomIn = () => map.current?.zoomIn();
+  const handleZoomOut = () => map.current?.zoomOut();
+  const handleResetZoom = () => map.current?.flyTo({ center: initialCenter, zoom: initialZoom });
 
   return (
     <div className="relative w-full h-full rounded-xl border border-slate-700 overflow-hidden shadow-inner min-h-[580px]" style={{ height }}>

@@ -1,10 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { 
   MapPin, Camera, CheckCircle2, Upload, ShieldCheck, Layers, 
-  Wifi, WifiOff, RefreshCw, AlertCircle, ShieldAlert, CheckSquare, Sparkles, Database
+  Wifi, WifiOff, RefreshCw, AlertCircle, ShieldAlert, CheckSquare, Sparkles, Database,
+  ArrowLeft, ArrowRight
 } from 'lucide-react';
 import { PrototypeBadge } from '../components/PrototypeBadge';
+import { WorkflowStepper } from '../components/WorkflowStepper';
+import { workflowApi } from '../services/api';
+
+const getAuthHeaders = (): Record<string, string> => {
+  const token = localStorage.getItem('access_token');
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+};
 
 interface OfflineRecord {
   client_id: string;
@@ -32,8 +44,8 @@ interface GroundTruthItem {
 }
 
 export const FieldSurvey: React.FC = () => {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const initialTargetId = searchParams.get('target_id') || 'Target-1';
 
   const [submitted, setSubmitted] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -41,7 +53,7 @@ export const FieldSurvey: React.FC = () => {
   const [offlineQueue, setOfflineQueue] = useState<OfflineRecord[]>([]);
 
   const [surveyData, setSurveyData] = useState({
-    targetId: initialTargetId,
+    targetId: searchParams.get('target_id') || '',
     collectorName: 'Eng. Ramesh Verma',
     latitude: 21.84,
     longitude: 80.72,
@@ -86,6 +98,21 @@ export const FieldSurvey: React.FC = () => {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
+    // Preserve exact Target ID from URL searchParams or backend workflow state
+    const paramTarget = searchParams.get('target_id');
+    if (paramTarget) {
+      setSurveyData((prev) => ({ ...prev, targetId: paramTarget }));
+    } else {
+      workflowApi.getState()
+        .then((res) => {
+          const wfTarget = res?.data?.workflow?.targetId;
+          if (wfTarget) {
+            setSurveyData((prev) => ({ ...prev, targetId: wfTarget }));
+          }
+        })
+        .catch(() => {});
+    }
+
     // Load offline queue from localStorage
     const saved = localStorage.getItem('mnvision_offline_queue');
     if (saved) {
@@ -94,8 +121,8 @@ export const FieldSurvey: React.FC = () => {
       } catch (e) {}
     }
 
-    // Fetch live Ground Truth list from backend
-    fetch('/api/ground-truth')
+    // Fetch live Ground Truth list from backend with Bearer token header
+    fetch('/api/ground-truth', { headers: getAuthHeaders() })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data && data.length > 0) setGroundTruthList(data);
@@ -106,13 +133,14 @@ export const FieldSurvey: React.FC = () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []);
+  }, [searchParams]);
 
   const handleSurveySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const activeTargetId = surveyData.targetId || searchParams.get('target_id') || 'Target ID Unavailable';
     const newRecord: OfflineRecord = {
       client_id: `CLI-${Date.now()}`,
-      target_id: surveyData.targetId,
+      target_id: activeTargetId,
       latitude: surveyData.latitude,
       longitude: surveyData.longitude,
       observer_name: surveyData.collectorName,
@@ -127,9 +155,9 @@ export const FieldSurvey: React.FC = () => {
       try {
         const res = await fetch('/api/field-observations', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAuthHeaders(),
           body: JSON.stringify({
-            target_id: surveyData.targetId,
+            target_id: activeTargetId,
             latitude: surveyData.latitude,
             longitude: surveyData.longitude,
             observer_name: surveyData.collectorName,
@@ -170,7 +198,7 @@ export const FieldSurvey: React.FC = () => {
     try {
       const res = await fetch('/api/field/sync', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ records: offlineQueue })
       });
       if (res.ok) {
@@ -185,10 +213,10 @@ export const FieldSurvey: React.FC = () => {
     try {
       const res = await fetch('/api/ground-truth/validate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           ground_truth_id: gtId,
-          target_id: surveyData.targetId,
+          target_id: surveyData.targetId || 'Target ID Unavailable',
           validation_status: newStatus,
           validated_by: 'Senior Geologist',
           notes: 'Validated for closed-loop model update.'
@@ -208,7 +236,10 @@ export const FieldSurvey: React.FC = () => {
   const handleControlledRetrain = async () => {
     setRetrainMsg("Executing controlled model retraining on validated ground truth...");
     try {
-      const res = await fetch('/api/exploration/retrain-model', { method: 'POST' });
+      const res = await fetch('/api/exploration/retrain-model', {
+        method: 'POST',
+        headers: getAuthHeaders()
+      });
       const data = await res.json();
       if (data && data.message) {
         setRetrainMsg(data.message);
@@ -233,7 +264,10 @@ export const FieldSurvey: React.FC = () => {
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 md:px-8 py-6 space-y-6 font-sans">
-      <PrototypeBadge type="banner" isReal={true} message="PWA FIELD LOGGING & CLOSED-LOOP GROUND-TRUTH VALIDATION" />
+      <PrototypeBadge type="banner" isReal={true} message="STAGE 3: VALIDATE — PWA FIELD LOGGING & CLOSED-LOOP GROUND-TRUTH VALIDATION" />
+
+      {/* 11-Stage Workflow Navigator */}
+      <WorkflowStepper activeStep={3} targetId={surveyData.targetId} />
 
       {/* Header Banner */}
       <div className="bg-gradient-to-r from-[#1B2170] via-[#313896] to-[#3B42A6] text-white p-6 rounded-2xl border border-[#2B308B] shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -485,6 +519,25 @@ export const FieldSurvey: React.FC = () => {
           </div>
         </div>
 
+      </div>
+
+      {/* PAGE NAVIGATION CONTROLS */}
+      <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-200 font-sans">
+        <button
+          onClick={() => navigate('/exploration')}
+          className="w-full sm:w-auto px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-full transition flex items-center justify-center gap-2"
+        >
+          <ArrowLeft className="w-4 h-4 text-slate-600" />
+          <span>BACK TO EXPLORATION (PAGE 1)</span>
+        </button>
+
+        <button
+          onClick={() => navigate(`/target-resource?target_id=${surveyData.targetId || 'MN-TGT-001'}`)}
+          className="w-full sm:w-auto px-7 py-2.5 bg-[#313896] hover:bg-[#282D7A] text-white font-bold text-xs rounded-full transition shadow-md flex items-center justify-center gap-2"
+        >
+          <span>PROCEED TO STAGE 4: RESOURCE ESTIMATION</span>
+          <ArrowRight className="w-4 h-4 text-amber-300" />
+        </button>
       </div>
     </div>
   );

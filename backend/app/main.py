@@ -23,6 +23,7 @@ from app.api import (
     mines,
     exploration,
     targets,
+    resources,
     production,
     equipment,
     blocks,
@@ -31,6 +32,8 @@ from app.api import (
     drilling,
     optimizer,
     whatif,
+    workflow,
+    decisions,
 )
 from app.database import check_db_connection
 
@@ -111,6 +114,7 @@ app.include_router(security.router, prefix="/api", tags=["Security Center"])
 app.include_router(mines.router, prefix="/api", tags=["Mines"])
 app.include_router(exploration.router, prefix="/api", tags=["Exploration"])
 app.include_router(targets.router, prefix="/api", tags=["Drill Targets"])
+app.include_router(resources.router, prefix="/api", tags=["Geological Resource Estimation"])
 app.include_router(drilling.router, prefix="/api", tags=["Closed-Loop Drilling & Ground Truth"])
 app.include_router(production.router, prefix="/api", tags=["Production"])
 app.include_router(optimizer.router, prefix="/api", tags=["Prescriptive Mine Optimizer"])
@@ -119,3 +123,5 @@ app.include_router(equipment.router, prefix="/api", tags=["Equipment"])
 app.include_router(blocks.router, prefix="/api", tags=["Mine Blocks"])
 app.include_router(recommendations.router, prefix="/api", tags=["Recommendations"])
 app.include_router(field.router, prefix="/api", tags=["Field Operations"])
+app.include_router(workflow.router, prefix="/api", tags=["Workflow State"])
+app.include_router(decisions.router, prefix="/api", tags=["Decision & Governance"])

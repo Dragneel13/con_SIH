@@ -17,53 +17,56 @@ interface AuthContextType {
   getDefaultDashboard: (role?: string) => string;
 }
 
+const ALL_SYSTEM_ROUTES = [
+  '/',
+  '/login',
+  '/contact',
+  '/exploration',
+  '/drill-planning',
+  '/target-resource',
+  '/mine-twin',
+  '/production',
+  '/shortfall',
+  '/shortfall-analysis',
+  '/corrective-actions',
+  '/optimization',
+  '/equipment',
+  '/decisions',
+  '/decision-center',
+  '/what-if',
+  '/weather',
+  '/security',
+  '/field-survey',
+  '/data-models',
+];
+
 const ROLE_PERMISSIONS: Record<string, string[]> = {
-  'Admin': [
-    '/',
-    '/exploration',
-    '/drill-planning',
-    '/mine-twin',
-    '/production',
-    '/equipment',
-    '/decisions',
-    '/weather',
-    '/security',
-    '/field-survey',
-    '/data-models',
-    '/contact'
-  ],
-  'Operations Manager': [
-    '/',
-    '/mine-twin',
-    '/production',
-    '/equipment',
-    '/decisions',
-    '/weather',
-    '/data-models',
-    '/contact',
-    '/exploration'
-  ],
+  'Admin': ALL_SYSTEM_ROUTES,
+  'Operations Manager': ALL_SYSTEM_ROUTES,
   'Geologist': [
     '/',
+    '/login',
+    '/contact',
     '/exploration',
     '/drill-planning',
+    '/target-resource',
     '/field-survey',
     '/data-models',
     '/weather',
-    '/contact'
   ],
   'Field Officer': [
     '/',
+    '/login',
+    '/contact',
     '/field-survey',
     '/exploration',
     '/weather',
-    '/contact'
   ]
 };
 
 const DEFAULT_DASHBOARDS: Record<string, string> = {
   'Admin': '/',
-  'Operations Manager': '/mine-twin',
+  'Operations Manager': '/',
   'Geologist': '/exploration',
   'Field Officer': '/field-survey'
 };
@@ -127,7 +130,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return true;
     }
 
-    const basePath = path.split('/')[1] ? `/${path.split('/')[1]}` : path;
+    // Admin role has full unrestricted access to all pages across the system
+    if (user && (user.role === 'Admin' || user.role.toLowerCase() === 'admin')) {
+      return true;
+    }
+
+    const cleanPath = path.split('?')[0].split('#')[0];
+    const basePath = cleanPath.split('/')[1] ? `/${cleanPath.split('/')[1]}` : cleanPath;
 
     if (!user) {
       return basePath === '/exploration' || basePath === '/contact';
@@ -136,7 +145,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const allowed = ROLE_PERMISSIONS[user.role];
     if (!allowed) return false;
 
-    return allowed.includes(basePath);
+    return allowed.includes(basePath) || allowed.includes(cleanPath);
   };
 
   return (

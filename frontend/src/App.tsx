@@ -12,6 +12,7 @@ import { DrillPlanning } from './pages/DrillPlanning';
 import { TargetAnalysis } from './pages/TargetAnalysis';
 import { MineTwin } from './pages/MineTwin';
 import { Production } from './pages/Production';
+import { ProductionShortfall } from './pages/ProductionShortfall';
 import { Equipment } from './pages/Equipment';
 import { DecisionCenter } from './pages/DecisionCenter';
 import { FieldSurvey } from './pages/FieldSurvey';
@@ -21,6 +22,10 @@ import { Login } from './pages/Login';
 import { Weather } from './pages/Weather';
 import { Security } from './pages/Security';
 import { WhatIfSimulator } from './pages/WhatIfSimulator';
+import { TargetResource } from './pages/TargetResource';
+import { ShortfallAnalysis } from './pages/ShortfallAnalysis';
+import { CorrectiveActions } from './pages/CorrectiveActions';
+import { Optimization } from './pages/Optimization';
 
 export const App: React.FC = () => {
   return (
@@ -69,6 +74,14 @@ export const App: React.FC = () => {
                 }
               />
               <Route
+                path="/target-resource"
+                element={
+                  <ProtectedRoute path="/target-resource">
+                    <TargetResource />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/mine-twin"
                 element={
                   <ProtectedRoute path="/mine-twin">
@@ -81,6 +94,46 @@ export const App: React.FC = () => {
                 element={
                   <ProtectedRoute path="/production">
                     <Production />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/shortfall"
+                element={
+                  <ProtectedRoute path="/shortfall">
+                    <ProductionShortfall />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/shortfall-analysis"
+                element={
+                  <ProtectedRoute path="/shortfall-analysis">
+                    <ShortfallAnalysis />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/shortfall/analyze"
+                element={
+                  <ProtectedRoute path="/shortfall-analysis">
+                    <ShortfallAnalysis />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/corrective-actions"
+                element={
+                  <ProtectedRoute path="/corrective-actions">
+                    <CorrectiveActions />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/optimization"
+                element={
+                  <ProtectedRoute path="/optimization">
+                    <Optimization />
                   </ProtectedRoute>
                 }
               />

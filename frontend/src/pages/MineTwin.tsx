@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Building2, Layers, CheckCircle2, ShieldAlert, ChevronRight, Activity, Zap, Check, AlertTriangle, X } from 'lucide-react';
 import { PrototypeBadge } from '../components/PrototypeBadge';
-import { Link } from 'react-router-dom';
+import { WorkflowStepper } from '../components/WorkflowStepper';
+import { Link, useNavigate } from 'react-router-dom';
+import { workflowApi } from '../services/api';
 
 interface MineBlockState {
   block_code: string;
@@ -17,9 +19,22 @@ interface MineBlockState {
 }
 
 export const MineTwin: React.FC = () => {
+  const navigate = useNavigate();
   const [mineState, setMineState] = useState<any>(null);
   const [blocks, setBlocks] = useState<MineBlockState[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const handleProceedToShortfall = async () => {
+    try {
+      await workflowApi.updateState({
+        currentStage: 'shortfall',
+        blockIds: ['BLK-BAL-01', 'BLK-BAL-02']
+      });
+    } catch (e) {
+      console.warn('Failed to update workflow state:', e);
+    }
+    navigate('/production');
+  };
 
   useEffect(() => {
     fetch('/api/minetwin')
@@ -45,8 +60,11 @@ export const MineTwin: React.FC = () => {
       <PrototypeBadge 
         type="banner" 
         isReal={true} 
-        message="PROTOTYPE SIMULATION DATA — MineTwin Operational State & Block Readiness Matrix" 
+        message="STAGE 6 & 7: MINE TWIN TELEMETRY & TREE SHAP ROOT-CAUSE ANALYSIS" 
       />
+
+      {/* 11-Stage Workflow Navigator */}
+      <WorkflowStepper activeStep={6} />
 
       {/* Page Title Header */}
       <div className="bg-gradient-to-r from-[#1B2170] via-[#313896] to-[#3B42A6] text-white p-6 rounded-2xl border border-[#2B308B] shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -121,13 +139,13 @@ export const MineTwin: React.FC = () => {
 
       {/* Link to ShortfallShield */}
       <div className="pt-2 text-right">
-        <Link
-          to="/production"
+        <button
+          onClick={handleProceedToShortfall}
           className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#313896] hover:bg-[#282D7A] text-white text-xs font-bold rounded-full transition shadow-sm"
         >
           <span>View ShortfallShield Production Forecasts & SHAP Analysis</span>
           <ChevronRight className="w-4 h-4 text-amber-300" />
-        </Link>
+        </button>
       </div>
     </div>
   );

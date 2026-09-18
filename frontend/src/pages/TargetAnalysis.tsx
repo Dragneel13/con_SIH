@@ -227,14 +227,66 @@ export const TargetAnalysis: React.FC = () => {
             className="px-6 py-2.5 bg-[#313896] hover:bg-[#282D7A] text-white font-bold text-xs rounded-full transition shadow-sm flex items-center gap-2"
           >
             <FileText className="w-4 h-4" />
-            <span>Open Field Survey PWA</span>
+            <span>Stage 3: Field Survey Ground Truth</span>
           </Link>
           <Link
-            to="/drill-planning"
-            className="px-6 py-2.5 bg-[#313896] hover:bg-[#282D7A] text-white font-bold text-xs rounded-full transition shadow-sm flex items-center gap-2"
+            to={`/decision-center?target_id=${target.target_id}`}
+            className="px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-full transition shadow-sm flex items-center gap-2"
           >
-            <span>Return to Drill Queue</span>
-            <ChevronRight className="w-4 h-4 text-amber-300" />
+            <Sparkles className="w-4 h-4 text-amber-200" />
+            <span>Stage 11: Trace Target in Decision Center</span>
+          </Link>
+        </div>
+      </div>
+
+      {/* 11-Stage Decision Support System Traceability Banner */}
+      <div className="bg-[#313896] text-white rounded-2xl p-6 shadow-md space-y-4 border border-[#2B308B]">
+        <div className="flex items-center justify-between border-b border-blue-400/30 pb-3">
+          <div className="flex items-center gap-2">
+            <Activity className="w-5 h-5 text-amber-300" />
+            <h3 className="text-base font-bold font-serif text-white">End-to-End 11-Stage Decision Support Workflow</h3>
+          </div>
+          <span className="text-xs font-mono bg-white/10 text-blue-100 px-3 py-1 rounded-full border border-white/20">
+            Target Linkage: <strong className="text-amber-300">{target.target_id}</strong>
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2.5 text-center text-xs">
+          <div className="p-2.5 rounded-xl bg-white/10 border border-white/15">
+            <span className="text-[10px] text-amber-300 uppercase font-bold block">Stage 1: Explore</span>
+            <span className="font-semibold">PU Prospectivity</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-white/10 border border-white/15">
+            <span className="text-[10px] text-amber-300 uppercase font-bold block">Stage 2: Investigate</span>
+            <span className="font-semibold">CEM Spectral Anomaly</span>
+          </div>
+          <Link to={`/field-survey?target_id=${target.target_id}`} className="p-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-amber-200 transition">
+            <span className="text-[10px] text-amber-300 uppercase font-bold block">Stage 3: Validate</span>
+            <span className="font-semibold underline">Core Assay Log</span>
+          </Link>
+          <div className="p-2.5 rounded-xl bg-white/10 border border-white/15">
+            <span className="text-[10px] text-amber-300 uppercase font-bold block">Stage 4: Resource</span>
+            <span className="font-semibold">3D Block Estimation</span>
+          </div>
+          <Link to="/production" className="p-2.5 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 border border-blue-400/40 text-blue-200 transition">
+            <span className="text-[10px] text-amber-300 uppercase font-bold block">Stage 5: Forecast</span>
+            <span className="font-semibold underline">Production Shield</span>
+          </Link>
+          <Link to="/mine-twin" className="p-2.5 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 border border-blue-400/40 text-blue-200 transition">
+            <span className="text-[10px] text-amber-300 uppercase font-bold block">Stage 6-7: Shortfall</span>
+            <span className="font-semibold underline">Tree SHAP Drivers</span>
+          </Link>
+          <Link to="/decisions" className="p-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/40 text-emerald-200 transition col-span-2">
+            <span className="text-[10px] text-amber-300 uppercase font-bold block">Stage 8-9: Optimization</span>
+            <span className="font-semibold underline">Prescriptive Recovery Plan</span>
+          </Link>
+          <div className="p-2.5 rounded-xl bg-white/10 border border-white/15 col-span-2">
+            <span className="text-[10px] text-amber-300 uppercase font-bold block">Stage 10: What-If</span>
+            <span className="font-semibold">Isolated Simulation</span>
+          </div>
+          <Link to="/decisions" className="p-2.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/40 text-purple-200 transition col-span-2">
+            <span className="text-[10px] text-amber-300 uppercase font-bold block">Stage 11: Governance</span>
+            <span className="font-semibold underline">Audit & Model Feedback</span>
           </Link>
         </div>
       </div>

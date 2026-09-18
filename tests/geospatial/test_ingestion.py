@@ -53,14 +53,16 @@ def test_vector_ingestor_load_and_clip():
     with TemporaryDirectory() as tmp_dir:
         tmp_path = Path(tmp_dir) / "sample_pts.geojson"
         
-        # Create sample vector GeoDataFrame inside and outside AOI (79.5-80.6 E, 21.5-22.1 N)
-        pts = [
-            Point(80.0, 21.8),  # Inside
-            Point(80.2, 21.9),  # Inside
-            Point(75.0, 15.0),  # Outside
-        ]
-        gdf = gpd.GeoDataFrame({"id": [1, 2, 3], "geometry": pts}, crs="EPSG:4326")
-        gdf.to_file(tmp_path, driver="GeoJSON")
+        geojson_str = json.dumps({
+            "type": "FeatureCollection",
+            "features": [
+                {"type": "Feature", "properties": {"id": 1}, "geometry": {"type": "Point", "coordinates": [80.0, 21.8]}},
+                {"type": "Feature", "properties": {"id": 2}, "geometry": {"type": "Point", "coordinates": [80.2, 21.9]}},
+                {"type": "Feature", "properties": {"id": 3}, "geometry": {"type": "Point", "coordinates": [75.0, 15.0]}}
+            ]
+        })
+        with open(tmp_path, 'w', encoding='utf-8') as f:
+            f.write(geojson_str)
         
         # Ingest and validate metadata
         loaded_gdf = VectorIngestor.load(tmp_path)

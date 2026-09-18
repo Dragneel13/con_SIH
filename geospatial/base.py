@@ -57,7 +57,17 @@ class AOIManager:
             raise FileNotFoundError(f"AOI file not found at {self.aoi_path}")
             
         logger.info(f"Loading Area of Interest (AOI) from {self.aoi_path}")
-        gdf = gpd.read_file(self.aoi_path)
+        import fiona
+        if not hasattr(fiona, 'path'):
+            fiona.path = type('FionaPathModule', (), {'ParsedPath': getattr(fiona, '_ParsedPath', None)})
+        try:
+            gdf = gpd.read_file(self.aoi_path)
+        except Exception:
+            import json, shapely.geometry
+            with open(self.aoi_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            geoms = [shapely.geometry.shape(feat['geometry']) for feat in data.get('features', []) if 'geometry' in feat]
+            gdf = gpd.GeoDataFrame({'id': range(len(geoms))}, geometry=geoms, crs="EPSG:4326")
         
         if gdf.empty:
             raise ValueError(f"AOI dataset at {self.aoi_path} is empty.")
@@ -149,7 +159,8 @@ class VectorIngestor:
         aoi_proj = aoi_gdf.to_crs(effective_crs) if aoi_gdf.crs.to_string() != effective_crs else aoi_gdf
         
         logger.info(f"Spatially clipping vector features to AOI boundary ({len(gdf)} input features)")
-        clipped_gdf = gpd.clip(gdf, aoi_proj)
+        mask_geom = aoi_proj.geometry.iloc[0] if len(aoi_proj) > 0 else aoi_proj
+        clipped_gdf = gpd.clip(gdf, mask_geom)
         logger.info(f"Clipped result: {len(clipped_gdf)} features remaining")
         return clipped_gdf
 

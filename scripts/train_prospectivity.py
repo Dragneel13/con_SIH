@@ -70,7 +70,7 @@ def main():
         'ndvi', 'ndbi', 'ndwi', 'clay_index', 'ferrous_index',
         'landsat_b1', 'landsat_b2', 'landsat_b3', 'landsat_b4', 'landsat_b5',
         'soil_moisture', 'rainfall',
-        'dist_roads_km', 'dist_chem_km', 'nearest_mno_pct',
+        'dist_roads_km',
         'cem_anomaly'
     ]
 

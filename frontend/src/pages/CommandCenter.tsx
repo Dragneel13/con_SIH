@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -15,13 +15,26 @@ import {
   Target, 
   FileText, 
   Info,
-  CheckCircle2
+  CheckCircle2,
+  Compass
 } from 'lucide-react';
 import { KPICard } from '../components/KPICard';
 import { PrototypeBadge } from '../components/PrototypeBadge';
+import { workflowApi } from '../services/api';
 
 export const CommandCenter: React.FC = () => {
+  const navigate = useNavigate();
   const [currentSlide, setCurrentSlide] = useState(0);
+
+  const handleLaunchWorkflow = async (targetLink: string) => {
+    try {
+      await workflowApi.initialize({ mineId: 'MN-BAL-001', targetId: 'MN-TGT-001' });
+    } catch (err) {
+      console.warn('Failed to initialize workflow state on backend:', err);
+    }
+    const separator = targetLink.includes('?') ? '&' : '?';
+    navigate(`${targetLink}${separator}mine_id=MN-BAL-001&target_id=MN-TGT-001`);
+  };
 
   const heroSlides = [
     {
@@ -149,13 +162,13 @@ export const CommandCenter: React.FC = () => {
 
           {/* Bottom Action Bar */}
           <div className="relative z-20 p-6 md:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-auto">
-            <NavLink
-              to={heroSlides[currentSlide].link}
+            <button
+              onClick={() => handleLaunchWorkflow(heroSlides[currentSlide].link)}
               className="inline-flex items-center gap-2 px-6 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold text-xs rounded-full shadow-lg transition-all transform hover:-translate-y-0.5"
             >
               <span>{heroSlides[currentSlide].cta}</span>
               <ArrowRight className="w-4 h-4" />
-            </NavLink>
+            </button>
 
             {/* Slide Dots */}
             <div className="flex items-center gap-2 bg-slate-950/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20">

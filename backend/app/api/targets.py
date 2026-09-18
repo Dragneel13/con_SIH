@@ -8,6 +8,7 @@ router = APIRouter()
 class DrillTargetHandoff(BaseModel):
     id: str
     target_id: str
+    mn_target_code: Optional[str] = "MN-TGT-001"
     name: str
     rank: int
     priority_level: str
@@ -22,11 +23,13 @@ class DrillTargetHandoff(BaseModel):
     recommended_action: str
     evidence: Dict[str, Any]
     scientific_safety_note: str
+    is_prototype: Optional[bool] = True
 
 TARGETS_FIXTURE = [
     {
         "id": "Target-1",
         "target_id": "Target-1",
+        "mn_target_code": "MN-TGT-001",
         "name": "Target 1",
         "rank": 1,
         "priority_level": "Very High",
@@ -47,11 +50,13 @@ TARGETS_FIXTURE = [
             "sar_polarization_ratio": 0.68,
             "dem_slope_deg": 12.6
         },
-        "scientific_safety_note": "Priority exploration target - Requires field validation."
+        "scientific_safety_note": "Priority exploration target - Requires field validation.",
+        "is_prototype": True
     },
     {
         "id": "Target-3",
         "target_id": "Target-3",
+        "mn_target_code": "MN-TGT-003",
         "name": "Target 3",
         "rank": 2,
         "priority_level": "Very High",
@@ -72,11 +77,13 @@ TARGETS_FIXTURE = [
             "sar_polarization_ratio": 0.64,
             "dem_slope_deg": 11.2
         },
-        "scientific_safety_note": "Priority exploration target - Requires field validation."
+        "scientific_safety_note": "Priority exploration target - Requires field validation.",
+        "is_prototype": True
     },
     {
         "id": "Target-2",
         "target_id": "Target-2",
+        "mn_target_code": "MN-TGT-002",
         "name": "Target 2",
         "rank": 3,
         "priority_level": "High",
@@ -97,11 +104,13 @@ TARGETS_FIXTURE = [
             "sar_polarization_ratio": 0.58,
             "dem_slope_deg": 9.8
         },
-        "scientific_safety_note": "Priority exploration target - Requires field validation."
+        "scientific_safety_note": "Priority exploration target - Requires field validation.",
+        "is_prototype": True
     },
     {
         "id": "Target-4",
         "target_id": "Target-4",
+        "mn_target_code": "MN-TGT-004",
         "name": "Target 4",
         "rank": 4,
         "priority_level": "High",
@@ -122,11 +131,13 @@ TARGETS_FIXTURE = [
             "sar_polarization_ratio": 0.52,
             "dem_slope_deg": 8.4
         },
-        "scientific_safety_note": "Priority exploration target - Requires field validation."
+        "scientific_safety_note": "Priority exploration target - Requires field validation.",
+        "is_prototype": True
     },
     {
         "id": "Target-5",
         "target_id": "Target-5",
+        "mn_target_code": "MN-TGT-005",
         "name": "Target 5",
         "rank": 5,
         "priority_level": "Medium",
@@ -147,7 +158,8 @@ TARGETS_FIXTURE = [
             "sar_polarization_ratio": 0.46,
             "dem_slope_deg": 7.1
         },
-        "scientific_safety_note": "Priority exploration target - Requires field validation."
+        "scientific_safety_note": "Priority exploration target - Requires field validation.",
+        "is_prototype": True
     }
 ]
 
@@ -157,8 +169,11 @@ def get_targets():
 
 @router.get("/targets/{target_id}", response_model=DrillTargetHandoff)
 def get_target(target_id: str):
+    tid_clean = target_id.lower().replace("-", "").replace("_", "")
     for t in TARGETS_FIXTURE:
-        if t["target_id"].lower() == target_id.lower() or t["id"].lower() == target_id.lower():
+        t_id_clean = t["target_id"].lower().replace("-", "").replace("_", "")
+        m_id_clean = t.get("mn_target_code", "").lower().replace("-", "").replace("_", "")
+        if t_id_clean in tid_clean or tid_clean in t_id_clean or m_id_clean in tid_clean or tid_clean in m_id_clean:
             return t
     return TARGETS_FIXTURE[0]
 
@@ -172,11 +187,11 @@ def explain_target(target_id: str):
         "applicability": target["applicability"],
         "evidence_summary": target["evidence"],
         "shap_summary": [
-            {"feature": "dist_chem_km", "contribution": 0.476, "direction": "positive"},
-            {"feature": "nearest_mno_pct", "contribution": 0.165, "direction": "positive"},
-            {"feature": "cem_anomaly", "contribution": 0.142, "direction": "positive"},
-            {"feature": "soil_moisture", "contribution": 0.076, "direction": "positive"},
-            {"feature": "structural_lineaments", "contribution": 0.051, "direction": "positive"}
+            {"feature": "cem_anomaly", "contribution": 0.384, "direction": "positive"},
+            {"feature": "soil_moisture", "contribution": 0.228, "direction": "positive"},
+            {"feature": "s1_ratio", "contribution": 0.145, "direction": "positive"},
+            {"feature": "clay_index", "contribution": 0.112, "direction": "positive"},
+            {"feature": "dist_roads_km", "contribution": 0.081, "direction": "positive"}
         ],
         "explanation_type": "Multi-Source Evidence Model Attribution (Not direct causality)",
         "scientific_safety_note": "Priority exploration target - Requires field validation."

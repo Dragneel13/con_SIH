@@ -41,10 +41,15 @@ def main():
     df_prod = df_prod.sort_values(by=['mine_id', 'block_id', 'date']).reset_index(drop=True)
 
     # 2. Join Mine Block Static Attributes
-    block_cols = ['block_id', 'mine_id', 'latitude', 'longitude', 'estimated_ore_tonnes', 'estimated_grade_mn', 
-                  'development_percent', 'drilling_percent', 'blasting_readiness', 'access_readiness']
+    block_cols = ['block_id', 'mine_id', 'mine_type', 'latitude', 'longitude', 'estimated_ore_tonnes', 'estimated_grade_mn', 
+                  'development_percent', 'drilling_percent', 'blasting_readiness', 'access_readiness', 'ready_block_tonnes']
     df_blocks_sub = df_blocks[[c for c in block_cols if c in df_blocks.columns]]
     df_merged = pd.merge(df_prod, df_blocks_sub, on=['mine_id', 'block_id'], how='left')
+
+    # Convert readiness strings to 0/1 numeric indicators
+    df_merged['blasting_readiness'] = df_merged['blasting_readiness'].apply(lambda x: 1.0 if str(x).upper() == 'READY' else 0.0)
+    df_merged['access_readiness'] = df_merged['access_readiness'].apply(lambda x: 1.0 if str(x).upper() == 'READY' else 0.0)
+    df_merged['mine_type_code'] = df_merged['mine_type'].apply(lambda x: 1 if str(x).upper() == 'UNDERGROUND' else 0)
 
     # 3. Aggregate Daily Equipment Stats per Mine
     equip_agg = df_equip.groupby(['date', 'mine_id']).agg(

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Target, MapPin, CheckCircle2, ChevronRight, Award, ShieldAlert, Sparkles, Activity, Layers, ArrowRight } from 'lucide-react';
 import { PrototypeBadge } from '../components/PrototypeBadge';
 import { Link, useNavigate } from 'react-router-dom';
+import { workflowApi } from '../services/api';
 
 interface DrillTargetItem {
   id: string;
@@ -39,6 +40,19 @@ export const DrillPlanning: React.FC = () => {
       })
       .catch(() => setLoading(false));
   }, []);
+
+  const handleProceedToFieldSurvey = async (targetId: string) => {
+    try {
+      await workflowApi.updateState({
+        currentStage: 'validate',
+        targetId,
+        investigationId: `INV-2026-${targetId.replace('Target-', '00')}`
+      });
+    } catch (e) {
+      console.warn('Failed to update workflow state:', e);
+    }
+    navigate(`/field-survey?target_id=${targetId}`);
+  };
 
   const getPriorityBadge = (priority: string) => {
     switch (priority) {
@@ -168,13 +182,13 @@ export const DrillPlanning: React.FC = () => {
                       <span>Analyze Target</span>
                       <ChevronRight className="w-3 h-3 text-amber-300" />
                     </Link>
-                    <Link
-                      to={`/field-survey?target_id=${target.target_id}`}
+                    <button
+                      onClick={() => handleProceedToFieldSurvey(target.target_id)}
                       className="px-3 py-1.5 bg-[#313896] text-white rounded-full text-[11px] font-bold hover:bg-[#282D7A] transition inline-flex items-center gap-1 shadow-sm"
                     >
                       <span>Field Survey</span>
                       <ArrowRight className="w-3 h-3" />
-                    </Link>
+                    </button>
                   </td>
                 </tr>
               ))}

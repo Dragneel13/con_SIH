@@ -1,3 +1,9 @@
+import sys
+import os
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "backend"))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
